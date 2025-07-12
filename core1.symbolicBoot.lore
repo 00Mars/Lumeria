@@ -94,6 +94,15 @@
 [/logic symbolic.bootSelf]
 
 [/capsule symbolic.bootSelf]
+[capsule load.capsules]
+
+[trigger load.capsules /]
+
+[logic load.capsules]
+  > emit: system.loadCapsules
+[/logic load.capsules]
+
+[/capsule load.capsules]
 
 [capsule symbolic.runtime]
 
@@ -867,6 +876,15 @@
 [/when]
 
 [/capsule core0.kernel.memory]
+[capsule kernel.boot.checkpoint]
+
+[trigger kernel.boot.checkpoint /]
+
+[logic kernel.boot.checkpoint]
+  > log: "📝 Kernel boot checkpoint reached"
+[/logic kernel.boot.checkpoint]
+
+[/capsule kernel.boot.checkpoint]
 
 [capsule core0.kernel.clock]
 
@@ -1063,6 +1081,15 @@
 [/logic queue.step]
 
 [/capsule core0.kernel.queue]
+[capsule kernel.next]
+
+[trigger kernel.next /]
+
+[logic kernel.next]
+  > emit: queue.step
+[/logic kernel.next]
+
+[/capsule kernel.next]
 
 [capsule core0.kernel.loop]
 
@@ -1082,6 +1109,15 @@
 [/logic]
 
 [/capsule core0.kernel.loop]
+[capsule runtime.awaitInput]
+
+[trigger runtime.awaitInput /]
+
+[logic runtime.awaitInput]
+  > log: "⌨️ Runtime awaiting input"
+[/logic runtime.awaitInput]
+
+[/capsule runtime.awaitInput]
 
 [capsule core0.kernel.input]
 
@@ -1238,5 +1274,15 @@
 [/logic]
 
 [/capsule parser.extractCapsules]
+[capsule capsule.parse]
+
+[trigger capsule.parse /]
+
+[logic capsule.parse]
+  > emit: parser.extractCapsules
+    ctx.text = {{ ctx.code }}
+[/logic capsule.parse]
+
+[/capsule capsule.parse]
 
 

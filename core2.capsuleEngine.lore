@@ -249,3 +249,23 @@
 [logic evaluate.allTriggers]
   > log: "🚧 Trigger stub for evaluate.allTriggers"
 [/logic evaluate.allTriggers]
+
+[capsule capsule.load]
+
+[trigger capsule.load /]
+
+[logic capsule.load]
+  > log: "📥 Loading capsule {{ ctx.capsule_id }}"
+[/logic capsule.load]
+
+[/capsule capsule.load]
+
+[capsule emit.signal]
+
+[trigger emit.signal /]
+
+[logic emit.signal]
+  > emit: {{ ctx.signal }}
+[/logic emit.signal]
+
+[/capsule emit.signal]
