@@ -1,7 +1,7 @@
 mod lumeria_loader;
 mod lumeria_runtime;
 
-use lumeria_loader::{CapsuleLoader, load_capsules_from_dir};
+use lumeria_loader::CapsuleLoader;
 use lumeria_runtime::LumeriaRuntime;
 
 fn main() {
@@ -16,7 +16,7 @@ fn main() {
     }
 
     // Dynamically load additional `.lore`, `.loot`, or `.arena` capsules from subdirectories
-    let recursive_capsules = load_capsules_from_dir(".");
+    let recursive_capsules = CapsuleLoader::load_dir(".");
     capsules.extend(recursive_capsules);
 
     println!("✅ Loaded {} capsules:", capsules.len());
