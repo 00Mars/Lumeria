@@ -2,16 +2,29 @@
 
 [trigger boot.assembly /]
 
+[memory ctx.bootDepth /]
+
 [logic assembly.bootSequence]
   > log: "🚀 [assembly] Starting core boot assembly"
   > emit: boot.capsuleLoader
   > emit: runtime.boot
   > emit: kernel.boot
   > emit: boot.start
-[/logic assembly.bootSequence]
-
+  > emit: boot.assembly.recurse
 [when boot.assembly]
   > emit: assembly.bootSequence
+[/logic assembly.bootSequence]
 [/when boot.assembly]
+
+[logic boot.assembly.recurse]
+  > default: ctx.bootDepth = 0
+  > memory.set: ctx.bootDepth = {{ ctx.bootDepth + 1 }}
+  [condition continue.recursion]
+    check: ctx.bootDepth < 2
+    then:
+      > emit: boot.assembly
+  [/condition continue.recursion]
+  > memory.set: ctx.bootDepth = {{ ctx.bootDepth - 1 }}
+[/logic boot.assembly.recurse]
 
 [/capsule assembly.boot]
