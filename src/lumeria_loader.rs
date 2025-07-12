@@ -8,7 +8,14 @@ pub struct Capsule {
     pub triggers: Vec<String>,
     pub logic: Vec<String>,
     pub mnemonic_map: HashMap<String, String>,
+    pub memory_blocks: Vec<String>,
+    pub meta_blocks: Vec<String>,
+    pub ui_blocks: Vec<String>,
+    pub rule_blocks: Vec<String>,
+    pub grammar_blocks: Vec<String>,
+    pub raw: String, // optional: store entire raw capsule text if needed
 }
+
 
 pub struct CapsuleLoader {
     file: PathBuf,
