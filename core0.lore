@@ -1,0 +1,11 @@
+[capsule my.test]
+
+[trigger hello.world /]
+
+[logic hello.world]
+  > log: "🌍 Hello World"
+  > emit: next.step
+[/logic hello.world]
+
+[/capsule my.test]
+
