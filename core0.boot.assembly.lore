@@ -1,0 +1,17 @@
+[capsule assembly.boot]
+
+[trigger boot.assembly /]
+
+[logic boot.assembly]
+  > log: "🚀 [assembly] Starting core boot assembly"
+  > emit: boot.capsuleLoader
+  > emit: runtime.boot
+  > emit: kernel.boot
+  > emit: boot.start
+[/logic boot.assembly]
+
+[when boot.assembly]
+  > emit: boot.assembly
+[/when boot.assembly]
+
+[/capsule assembly.boot]
