@@ -43,7 +43,7 @@
   > emit: quantum.init
   > emit: quantum.loop
   > emit: quantumBranch.init
-  > emit: emit.signal  # Patch to resolve orphan trigger
+  > emit: quantum.ready
 [/logic boot.quantumBranch]
 
 [logic quantum.init]
@@ -205,7 +205,7 @@
 [trigger quantum.ready /]
 
 [logic quantum.ready]
-  > log: "🚧 Trigger stub for quantum.ready"
+  > log: "🌀 Quantum branch initialized"
 [/logic quantum.ready]
 
 [logic emit.quantum.branch.emit]

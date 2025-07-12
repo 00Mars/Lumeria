@@ -202,50 +202,26 @@
 [/capsule evaluate.condition]
 
 [/capsule core2.capsuleEngine]
-[trigger engine.processTriggers /]
 
-[logic engine.processTriggers]
-  > log: "🚧 Trigger stub for engine.processTriggers"
-[/logic engine.processTriggers]
+[capsule capsule.load]
 
-[trigger engine.matchTrigger /]
-
-[logic engine.matchTrigger]
-  > log: "🚧 Trigger stub for engine.matchTrigger"
-[/logic engine.matchTrigger]
-
+[trigger capsule.load /]
 [trigger load.capsule /]
 
-[logic load.capsule]
-  > log: "🚧 Trigger stub for load.capsule"
-[/logic load.capsule]
+[logic capsule.load]
+  > log: "📥 Loading capsule {{ ctx.capsule_id }}"
+  > memory.list.add: runtime.loadedCapsules = ctx.capsule_id
+  > emit: capsule.loaded
+[/logic capsule.load]
 
-[trigger engine.runNext /]
+[/capsule capsule.load]
 
-[logic engine.runNext]
-  > log: "🚧 Trigger stub for engine.runNext"
-[/logic engine.runNext]
+[capsule emit.signal]
 
-[trigger engine.bootstrap /]
+[trigger emit.signal /]
 
-[logic engine.bootstrap]
-  > log: "🚧 Trigger stub for engine.bootstrap"
-[/logic engine.bootstrap]
+[logic emit.signal]
+  > emit: {{ ctx.signal }}
+[/logic emit.signal]
 
-[trigger evaluate.condition /]
-
-[logic evaluate.condition]
-  > log: "🚧 Trigger stub for evaluate.condition"
-[/logic evaluate.condition]
-
-[trigger engine.executeBlock /]
-
-[logic engine.executeBlock]
-  > log: "🚧 Trigger stub for engine.executeBlock"
-[/logic engine.executeBlock]
-
-[trigger evaluate.allTriggers /]
-
-[logic evaluate.allTriggers]
-  > log: "🚧 Trigger stub for evaluate.allTriggers"
-[/logic evaluate.allTriggers]
+[/capsule emit.signal]

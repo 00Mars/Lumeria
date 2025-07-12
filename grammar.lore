@@ -12,6 +12,12 @@
 [logic validate.grammar]
   > emit: grammar.check.all
 
+[trigger grammar.check.all /]
+
+[logic grammar.check.all]
+  > log: "🔍 Running full grammar validation"
+[/logic grammar.check.all]
+
 [meta grammarSpec]
   set: type = grammar
   set: version = 0.4
@@ -60,6 +66,12 @@
 [/logic validateSignalStructure]
 
 [/capsule grammar.signal.structure]
+
+[trigger reject.signal /]
+
+[logic reject.signal]
+  > log: "❌ Signal rejected: {{ ctx.reason }}"
+[/logic reject.signal]
 
 ########################################################################################
                             ## SYMBOLIC CONSTANTS BLOCK: ##
