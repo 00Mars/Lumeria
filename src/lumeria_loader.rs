@@ -109,7 +109,6 @@ fn parse_capsules_from_file(data: &str) -> Vec<Capsule> {
 
         println!("🧠 Capsule loaded: {}", capsule.name);
         capsules.push(capsule);
-    }
 
 impl CapsuleLoader {
     // Load all capsules from a directory that match `core*.lore`
