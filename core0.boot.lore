@@ -11,41 +11,19 @@
 [trigger boot.capsuleLoader /]
 
 [logic loader.bootSequence]
-  > log: "📦 [core0] Booting Capsule Loader..."
-  > emit: capsuleLoader.init
-  > emit: capsuleLoader.ready
-  > emit: context.push  # Patch to resolve orphan trigger
-  > emit: boot.start
+  > default: boot.count = 0
+  > memory.set: boot.count = {{ boot.count + 1 }}
+
+  [condition boot.count == 1]
+    check: boot.count == 1
+    then:
+      > log: "📦 [core0] Booting Capsule Loader..."
+      > emit: capsuleLoader.init
+      > emit: capsuleLoader.ready
+      > emit: context.push
+      > emit: boot.start
+  [/condition boot.count == 1]
 [/logic loader.bootSequence]
-
-[when boot.capsuleLoader]
-  > emit: loader.bootSequence
-[/when boot.capsuleLoader]
-
-[/capsule core0.boot.sequence]
-
-[capsule core0.boot.initState]
-
-[meta loader.init]
-  set: type = loader
-  set: version = 0.6
-  set: author = system.lumeria
-  set: purpose = "Initialize the capsule loader and begin scanning process."
-[/meta loader.init]
-
-[trigger capsuleLoader.init /]
-
-[logic loader.init]
-  > log: "⚙️ [loader] Initializing loader state"
-  > memory.scope: capsuleLoader
-  > memory.set: capsuleLoader.ready = true
-  > emit: audit.log
-  > emit: boot.storyMemory
-[/logic loader.init]
-
-[when capsuleLoader.init]
-  > emit: loader.init
-[/when capsuleLoader.init]
 
 [/capsule core0.boot.initState]
 
