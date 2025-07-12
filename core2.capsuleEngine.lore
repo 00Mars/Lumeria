@@ -202,53 +202,6 @@
 [/capsule evaluate.condition]
 
 [/capsule core2.capsuleEngine]
-[trigger engine.processTriggers /]
-
-[logic engine.processTriggers]
-  > log: "🚧 Trigger stub for engine.processTriggers"
-[/logic engine.processTriggers]
-
-[trigger engine.matchTrigger /]
-
-[logic engine.matchTrigger]
-  > log: "🚧 Trigger stub for engine.matchTrigger"
-[/logic engine.matchTrigger]
-
-[trigger load.capsule /]
-
-[logic load.capsule]
-  > log: "🚧 Trigger stub for load.capsule"
-[/logic load.capsule]
-
-[trigger engine.runNext /]
-
-[logic engine.runNext]
-  > log: "🚧 Trigger stub for engine.runNext"
-[/logic engine.runNext]
-
-[trigger engine.bootstrap /]
-
-[logic engine.bootstrap]
-  > log: "🚧 Trigger stub for engine.bootstrap"
-[/logic engine.bootstrap]
-
-[trigger evaluate.condition /]
-
-[logic evaluate.condition]
-  > log: "🚧 Trigger stub for evaluate.condition"
-[/logic evaluate.condition]
-
-[trigger engine.executeBlock /]
-
-[logic engine.executeBlock]
-  > log: "🚧 Trigger stub for engine.executeBlock"
-[/logic engine.executeBlock]
-
-[trigger evaluate.allTriggers /]
-
-[logic evaluate.allTriggers]
-  > log: "🚧 Trigger stub for evaluate.allTriggers"
-[/logic evaluate.allTriggers]
 
 [capsule capsule.load]
 
