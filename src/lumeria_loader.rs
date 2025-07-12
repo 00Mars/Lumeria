@@ -1,6 +1,6 @@
 use std::fs;
-use std::path::Path;
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use regex::Regex;
 
 #[derive(Debug, Clone)]
@@ -10,13 +10,36 @@ pub struct Capsule {
     pub logic: Vec<String>,
     pub mnemonic_map: HashMap<String, String>,
 }
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::collections::HashMap;
+use regex::Regex;
+
+#[derive(Debug)]
+pub struct Capsule {
+    pub name: String,
+    pub triggers: Vec<String>,
+    pub logic: Vec<String>,
+    pub mnemonic_map: HashMap<String, String>,
+}
+
+pub struct CapsuleLoader {
+    file: PathBuf,
+}
+
+impl CapsuleLoader {
+    pub fn new<P: AsRef<Path>>(file: P) -> Self {
+        Self { file: file.as_ref().to_path_buf() }
+    }
+
+    pub fn load_capsules(&self) -> Vec<Capsule> {
+        let data = fs::read_to_string(&self.file).expect("Unable to read lore file");
+        parse_capsules_from_file(&data)
+    }
+}
 
 pub fn load_capsules_from_dir<P: AsRef<Path>>(dir: P) -> Vec<Capsule> {
     let mut capsules = Vec::new();
-
-pub fn load_capsules_from_dir(dir: &Path) -> Vec<Capsule> {
-    let mut capsules = Vec::new();
-
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -30,7 +53,6 @@ pub fn load_capsules_from_dir(dir: &Path) -> Vec<Capsule> {
             }
         }
     }
-
     capsules
 }
 
@@ -55,9 +77,8 @@ fn parse_capsules_from_file(data: &str) -> Vec<Capsule> {
         for lcap in logic_re.captures_iter(body) {
             let logic_text = lcap.get(2).unwrap().as_str().trim().to_string();
             for line in logic_text.lines() {
-                let line = line.trim();
-                if let Some(rest) = line.strip_prefix("> mnemonic.map:") {
-                    let mut parts = rest.trim().splitn(2, '=');
+                if let Some(rest) = line.trim().strip_prefix("> mnemonic.map:") {
+                    let mut parts = rest.splitn(2, '=');
                     if let (Some(key), Some(val)) = (parts.next(), parts.next()) {
                         mnemonic_map.insert(key.trim().to_string(), val.trim().to_string());
                     }
@@ -65,6 +86,19 @@ fn parse_capsules_from_file(data: &str) -> Vec<Capsule> {
             }
             logic_blocks.push(logic_text);
         }
+
+        println!("🧠 Capsule loaded: {}", cap_name);
+        capsules.push(Capsule {
+            name: cap_name,
+            triggers,
+            logic: logic_blocks,
+            mnemonic_map,
+        });
+    }
+
+    capsules
+}
+
 
         let capsule = Capsule {
             name: cap_name,
@@ -77,8 +111,25 @@ fn parse_capsules_from_file(data: &str) -> Vec<Capsule> {
         capsules.push(capsule);
     }
 
-    capsules
+impl CapsuleLoader {
+    // Load all capsules from a directory that match `core*.lore`
+    pub fn load_dir<P: AsRef<Path>>(dir: P) -> Vec<Capsule> {
+        let mut all = Vec::new();
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+                    if name.starts_with("core") && name.ends_with(".lore") {
+                        let loader = CapsuleLoader::new(&path);
+                        all.extend(loader.load_capsules());
+                    }
+                }
+            }
+        }
+        all
+    }
 }
+
 
 fn parse_capsules_from_file(data: &str) -> Vec<Capsule> {
     let capsule_re = Regex::new(r"\[capsule ([^\]]+)](?s)(.*?)\[/capsule .*?\]").unwrap();
