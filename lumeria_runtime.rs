@@ -1,7 +1,5 @@
-// ===== src/lumeria_runtime.rs =====
 use std::collections::HashMap;
 use crate::lumeria_loader::Capsule;
-use std::collections::HashMap;
 
 pub struct LumeriaRuntime {
     pub capsules: Vec<Capsule>,
@@ -16,11 +14,9 @@ impl LumeriaRuntime {
         let mut trigger_map: HashMap<String, Vec<usize>> = HashMap::new();
 
         for (i, cap) in capsules.iter().enumerate() {
-            // Load mnemonic mappings
             for (k, v) in &cap.mnemonic_map {
                 mnemonic_map.insert(k.clone(), v.clone());
             }
-            // Build trigger index
             for trig in &cap.triggers {
                 trigger_map.entry(trig.clone()).or_default().push(i);
             }
@@ -33,9 +29,7 @@ impl LumeriaRuntime {
             memory: HashMap::new(),
         }
     }
-}
 
-impl LumeriaRuntime {
     pub fn emit(&mut self, signal: &str) {
         println!("\n🚨 Emit: {}", signal);
 
@@ -63,6 +57,7 @@ impl LumeriaRuntime {
 
     fn execute_logic(&mut self, logic: &str) {
         let mut lines = logic.lines().peekable();
+
         while let Some(raw) = lines.next() {
             let line = raw.trim();
 
@@ -70,8 +65,7 @@ impl LumeriaRuntime {
                 let msg = rest.trim().trim_matches('"');
                 println!("{}", msg);
             } else if let Some(rest) = line.strip_prefix("> emit:") {
-                let sig = rest.trim();
-                self.emit(sig);
+                self.emit(rest.trim());
             } else if let Some(rest) = line.strip_prefix("> default:") {
                 if let Some((k, v)) = self.parse_assignment(rest) {
                     self.memory.entry(k).or_insert(v);
@@ -159,50 +153,3 @@ impl LumeriaRuntime {
         }
     }
 }
-
-    fn parse_assignment(&mut self, raw: &str) -> Option<(String, i64)> {
-        let mut parts = raw.trim().splitn(2, '=');
-        let key = parts.next()?.trim().to_string();
-        let val_expr = parts.next()?.trim();
-        let value = self.parse_value(val_expr);
-        Some((key, value))
-    }
-
-    fn parse_value(&self, expr: &str) -> i64 {
-        let expr = expr.trim();
-        if expr.starts_with("{{") && expr.ends_with("}}") {
-            let inner = expr.trim_start_matches("{{").trim_end_matches("}}").trim();
-            let mut tokens = inner.split_whitespace();
-            if let (Some(var), Some(op), Some(num)) = (tokens.next(), tokens.next(), tokens.next()) {
-                let val: i64 = num.parse().unwrap_or(0);
-                let base = *self.memory.get(var).unwrap_or(&0);
-                return match op {
-                    "+" => base + val,
-                    "-" => base - val,
-                    _ => base,
-                };
-            }
-            0
-        } else {
-            expr.parse().unwrap_or(0)
-        }
-    }
-
-    fn evaluate_condition(&self, cond: &str) -> bool {
-        let mut tokens = cond.split_whitespace();
-        if let (Some(var), Some(op), Some(num_str)) = (tokens.next(), tokens.next(), tokens.next()) {
-            let left = *self.memory.get(var).unwrap_or(&0);
-            let right: i64 = num_str.parse().unwrap_or(0);
-            match op {
-                "<" => left < right,
-                "<=" => left <= right,
-                ">" => left > right,
-                ">=" => left >= right,
-                "==" => left == right,
-                "!=" => left != right,
-                _ => false,
-            }
-        } else {
-            false
-        }
-    }
