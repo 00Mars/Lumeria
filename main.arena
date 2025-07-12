@@ -1,0 +1,20 @@
+[capsule arena.entry]
+
+[meta]
+  set: type = arena
+  set: version = 1.0
+  set: author = system.lumeria
+  set: purpose = "Initialize Lumeria runtime entrypoint"
+[/meta]
+
+[trigger arena.boot /]
+
+[logic arena.boot]
+  > log: "🌐 Arena system entrypoint initializing..."
+  > emit: boot.capsuleLoader
+  > emit: boot.webBridge
+  > emit: boot.storyMemory
+  > emit: boot.start
+[/logic arena.boot]
+
+[/capsule arena.entry]
