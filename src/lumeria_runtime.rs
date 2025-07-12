@@ -6,6 +6,7 @@ pub struct LumeriaRuntime {
     pub mnemonic_map: HashMap<String, String>,
     pub trigger_map: HashMap<String, Vec<usize>>,
     pub memory: HashMap<String, i64>,
+    call_stack: Vec<String>,
 }
 
 impl LumeriaRuntime {
@@ -27,10 +28,22 @@ impl LumeriaRuntime {
             mnemonic_map,
             trigger_map,
             memory: HashMap::new(),
+            call_stack: Vec::new(),
         }
     }
 
     pub fn emit(&mut self, signal: &str) {
+        if self.call_stack.contains(&signal.to_string()) {
+            println!("⚠️ Detected emit loop for: {}", signal);
+            return;
+        }
+
+        if self.call_stack.len() > 100 {
+            println!("⚠️ Maximum emit depth exceeded");
+            return;
+        }
+
+        self.call_stack.push(signal.to_string());
         println!("\n🚨 Emit: {}", signal);
 
         let Some(indices) = self.trigger_map.get(signal).cloned() else {
@@ -49,6 +62,8 @@ impl LumeriaRuntime {
                 self.execute_logic(&logic);
             }
         }
+
+        self.call_stack.pop();
     }
 
     pub fn mnemonic_keys(&self) -> Vec<String> {
