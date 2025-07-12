@@ -453,11 +453,10 @@
   set: purpose = "Echo emitted signals and flag unknowns"
 [/meta]
 
-[trigger signal: input:* /]
+[trigger signal:* /]
 
 [logic]
 
-  > let signal = signal.replace("input:", "")
   > log: "🔎 Signal received: {{ signal }}"
 
   [condition signal startsWith "fake."]

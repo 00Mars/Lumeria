@@ -206,9 +206,12 @@
 [capsule capsule.load]
 
 [trigger capsule.load /]
+[trigger load.capsule /]
 
 [logic capsule.load]
   > log: "📥 Loading capsule {{ ctx.capsule_id }}"
+  > memory.list.add: runtime.loadedCapsules = ctx.capsule_id
+  > emit: capsule.loaded
 [/logic capsule.load]
 
 [/capsule capsule.load]
