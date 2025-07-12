@@ -7,15 +7,14 @@ use lumeria_runtime::LumeriaRuntime;
 fn main() {
     println!("🧠 Loading Lumeria system...");
 
-    // Load primary boot capsule
-    let loader_primary = CapsuleLoader::new("core0.lore");
-    let mut capsules = loader_primary.load_capsules();
+    // Load explicitly defined core files
+    let mut capsules = Vec::new();
+    for file in ["core0.lore", "grammar.lore", "core0.boot.assembly.lore"] {
+        let loader = CapsuleLoader::new(file);
+        capsules.extend(loader.load_capsules());
+    }
 
-    // Load supplemental boot capsules
-    let loader_boot = CapsuleLoader::new("core0.boot.assembly.lore");
-    capsules.extend(loader_boot.load_capsules());
-
-    // Fallback: dynamically load any extra capsules from directory
+    // Fallback: dynamically load any extra capsules from ./Lumeria
     let extra_capsules = load_capsules_from_dir("./Lumeria");
     capsules.extend(extra_capsules);
 
