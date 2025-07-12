@@ -1,6 +1,7 @@
 [capsule assembly.boot]
 
 [trigger boot.assembly /]
+[trigger boot.assembly.recurse /]
 
 [memory ctx.bootDepth /]
 
@@ -20,7 +21,7 @@
   > default: ctx.bootDepth = 0
   > memory.set: ctx.bootDepth = {{ ctx.bootDepth + 1 }}
   [condition continue.recursion]
-    check: ctx.bootDepth < 2
+    check: ctx.bootDepth < 100
     then:
       > emit: boot.assembly
   [/condition continue.recursion]
