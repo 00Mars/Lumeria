@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub struct Capsule {
@@ -9,12 +9,12 @@ pub struct Capsule {
 }
 
 pub struct CapsuleLoader {
-    file: String,
+    file: PathBuf,
 }
 
 impl CapsuleLoader {
     pub fn new<P: AsRef<Path>>(file: P) -> Self {
-        Self { file: file.as_ref().to_string_lossy().to_string() }
+        Self { file: file.as_ref().to_path_buf() }
     }
 
     pub fn load_capsules(&self) -> Vec<Capsule> {
@@ -68,7 +68,7 @@ impl CapsuleLoader {
                         }
                     }
 
-                    println!("Capsule loaded: {}", cap_name);
+                    println!("🧠 Capsule loaded: {}", cap_name);
                     capsules.push(Capsule { name: cap_name, triggers, logic: logic_blocks });
                     search_start = body_end + close_tag.len();
                 } else {
@@ -79,6 +79,22 @@ impl CapsuleLoader {
             }
         }
         capsules
+    }
+
+    pub fn load_dir<P: AsRef<Path>>(dir: P) -> Vec<Capsule> {
+        let mut all = Vec::new();
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+                    if name.starts_with("core") && name.ends_with(".lore") {
+                        let loader = CapsuleLoader::new(&path);
+                        all.extend(loader.load_capsules());
+                    }
+                }
+            }
+        }
+        all
     }
 }
 
