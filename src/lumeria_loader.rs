@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::Path;
+use std::collections::HashMap;
 use regex::Regex;
 
 #[derive(Debug)]
@@ -7,6 +8,7 @@ pub struct Capsule {
     pub name: String,
     pub triggers: Vec<String>,
     pub logic: Vec<String>,
+    pub mnemonic_map: HashMap<String, String>,
 }
 
 pub struct CapsuleLoader {
@@ -31,16 +33,30 @@ impl CapsuleLoader {
             let body = cap.get(2).unwrap().as_str();
             let mut triggers = Vec::new();
             let mut logic_blocks = Vec::new();
+            let mut mnemonic_map = HashMap::new();
             for tcap in trigger_re.captures_iter(body) {
                 triggers.push(tcap.get(1).unwrap().as_str().trim().to_string());
             }
             for lcap in logic_re.captures_iter(body) {
-                logic_blocks.push(lcap.get(2).unwrap().as_str().trim().to_string());
+                let logic_text = lcap.get(2).unwrap().as_str().trim().to_string();
+                for line in logic_text.lines() {
+                    let line = line.trim();
+                    if let Some(rest) = line.strip_prefix("> mnemonic.map:") {
+                        let mut parts = rest.trim().splitn(2, '=');
+                        if let Some(key) = parts.next() {
+                            if let Some(val) = parts.next() {
+                                mnemonic_map.insert(key.trim().to_string(), val.trim().to_string());
+                            }
+                        }
+                    }
+                }
+                logic_blocks.push(logic_text);
             }
             let capsule = Capsule {
                 name: cap_name,
                 triggers,
                 logic: logic_blocks,
+                mnemonic_map,
             };
             println!("🧠 Capsule loaded: {}", capsule.name);
             capsules.push(capsule);
