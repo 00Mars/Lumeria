@@ -12,9 +12,10 @@
   > emit: kernel.boot
   > emit: boot.start
   > emit: boot.assembly.recurse
+[/logic assembly.bootSequence]
+
 [when boot.assembly]
   > emit: assembly.bootSequence
-[/logic assembly.bootSequence]
 [/when boot.assembly]
 
 [logic boot.assembly.recurse]
