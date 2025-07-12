@@ -7,7 +7,17 @@ use lumeria_runtime::LumeriaRuntime;
 fn main() {
     println!("🧠 Loading Lumeria system...");
 
-    let capsules = load_capsules_from_dir("./Lumeria");
+    // Load primary boot capsule
+    let loader_primary = CapsuleLoader::new("core0.lore");
+    let mut capsules = loader_primary.load_capsules();
+
+    // Load supplemental boot capsules
+    let loader_boot = CapsuleLoader::new("core0.boot.assembly.lore");
+    capsules.extend(loader_boot.load_capsules());
+
+    // Fallback: dynamically load any extra capsules from directory
+    let extra_capsules = load_capsules_from_dir("./Lumeria");
+    capsules.extend(extra_capsules);
 
     println!("✅ Loaded {} capsules:", capsules.len());
     for capsule in &capsules {
@@ -18,5 +28,6 @@ fn main() {
     }
 
     let mut runtime = LumeriaRuntime::new(capsules);
-    runtime.emit("boot.capsuleLoader");
+    runtime.emit("go");
 }
+
