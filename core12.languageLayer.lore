@@ -1,0 +1,324 @@
+[capsule core12.languageLayer]
+
+[capsule language.grammar.symbolic]
+
+[meta grammar.symbolic]
+  set: version = 0.4
+  set: type = system
+  set: purpose = "Symbolic grammar validator, extender, and semantic resolver"
+  set: author = system.lumeria
+[/meta grammar.symbolic]
+
+[trigger grammar.validate /]
+[trigger grammar.evolve /]
+[trigger grammar.coverage.scan /]
+[trigger grammar.symbol.sanitize /]
+[trigger semantic.resolve /]
+[trigger intent.observe /]
+[trigger intent.define /]
+[trigger signal.intent.detect /]
+
+[memory grammar.validation.errors /]
+[memory grammar.valid.symbols /]
+[memory grammar.ruleset /]
+[memory grammar.coverage.map /]
+[memory grammar.evolution.log /]
+[memory semantic.map /]
+[memory intent.map /]
+[memory intent.current /]
+[memory intent.vector /]
+[memory signal.intent.traces /]
+
+[logic grammar.init]
+  > log: "🔍 Symbolic grammar + semantic engine initializing..."
+  > emit: grammar.bootstrap
+  > emit: semantic.bootstrap
+  > emit: intent.sync
+  > emit: grammar.validate  # Patch to resolve orphan trigger
+[/logic grammar.init]
+
+[when grammar.bootstrap]
+  > memory.set: grammar.valid.symbols = [
+      "emit", "draw", "log", "condition", "if", "else", "do",
+      "memory.set", "memory.get", "memory.append", "eval", "foreach"
+    ]
+  > log: "📚 Grammar primitives loaded"
+[/when grammar.bootstrap]
+
+[when grammar.validate]
+  > log: "🔎 Validating symbolic grammar..."
+  > emit: grammar.symbol.sanitize
+  > emit: grammar.coverage.scan
+  [condition valid]
+    check: ctx.node.tag in grammar.valid.symbols
+    then: > emit: grammar.validate.pass
+    else:
+      > emit: grammar.validate.fail
+      > emit: grammar.suggest ctx.node.tag
+[/when grammar.validate]
+
+[when grammar.validate.pass]
+  > log: "[✔] Grammar tag valid: {{ ctx.node.tag }}"
+[/when grammar.validate.pass]
+
+[when grammar.validate.fail]
+  > memory.append: grammar.validation.errors = ctx.node.tag
+  > log: "[❌] Invalid grammar tag: {{ ctx.node.tag }}"
+[/when grammar.validate.fail]
+
+[when grammar.suggest]
+  > memory.set: ctx.suggestion = find.closest(ctx.signal, grammar.valid.symbols)
+  > draw.label: "❓ Did you mean '{{ ctx.suggestion }}'?"
+[/when grammar.suggest]
+
+[when grammar.symbol.sanitize]
+  - each: rule in grammar.ruleset
+    do:
+      [condition rule.symbol.hasInvalid]
+        check: rule.symbol contains "*invalid*"
+        then:
+          > log: "❌ Invalid symbol in rule: {{ rule.name }}"
+          > emit: grammar.rule.invalid name = rule.name
+[/when grammar.symbol.sanitize]
+
+[when grammar.coverage.scan]
+  > log: "📊 Scanning grammar usage..."
+  > memory.set: grammar.coverage.map = {}
+  - each: rule in grammar.ruleset
+    do:
+      > memory.append: grammar.coverage.map[rule.name] = rule.coverage
+      > log: "🧮 Rule {{ rule.name }} has coverage: {{ rule.coverage }}"
+  > emit: grammar.coverage.complete
+[/when grammar.coverage.scan]
+
+[when grammar.evolve]
+  > log: "🧬 Evolving symbolic grammar structure..."
+  > emit: grammar.coverage.scan
+  > emit: grammar.introspect
+  > emit: grammar.expand.variants
+  > emit: grammar.crosslink.rules
+[/when grammar.evolve]
+
+[when grammar.introspect]
+  > draw.label: "📘 Current Grammar Symbols:"
+  > draw.append: grammar.valid.symbols
+[/when grammar.introspect]
+
+[when semantic.bootstrap]
+  > log: "🧠 Bootstrapping semantic engine"
+  > memory.set: semantic.map = {}
+[/when semantic.bootstrap]
+
+[when semantic.resolve]
+  [condition known]
+    check: ctx.symbol in semantic.map
+    then:
+      > memory.set: ctx.resolved = semantic.map[ctx.symbol]
+      > emit: semantic.reflect
+    else:
+      > draw.label: "❓ Unknown symbol: {{ ctx.symbol }}"
+      > emit: semantic.suggest ctx.symbol
+[/when semantic.resolve]
+
+[when semantic.reflect]
+  > draw.label: "🔎 {{ ctx.symbol }} → {{ ctx.resolved }}"
+[/when semantic.reflect]
+
+[when semantic.suggest]
+  > memory.set: ctx.guess = find.closest(ctx.signal, keys(semantic.map))
+  > draw.label: "🤔 Closest known symbol: {{ ctx.guess }}"
+[/when semantic.suggest]
+
+[when intent.observe]
+  > log: "🧠 Observing intent from signal {{ ctx.signal }}"
+  > memory.set: intent.current = infer.intent(ctx.signal)
+  > emit: intent.evaluate
+[/when intent.observe]
+
+[when intent.evaluate]
+  [condition known]
+    check: intent.current in intent.map
+    then: > emit: intent.project
+    else: > draw.label: "⚠️ Unknown intent: {{ intent.current }}"
+[/when intent.evaluate]
+
+[when intent.project]
+  > draw.label: "📡 Projected intent: {{ intent.map[intent.current] }}"
+  > emit: {{ intent.map[intent.current] }}
+[/when intent.project]
+
+[when intent.define]
+  > input: "🆕 Intent name?"
+  > memory.set: intent.name = input
+  > input: "🔁 Associated signal?"
+  > memory.set: intent.map[intent.name] = input
+  > draw.label: "✅ Intent '{{ intent.name }}' → {{ input }}"
+[/when intent.define]
+
+[when signal.intent.detect]
+  > log: "[📡] Detecting intent from signal: {{ ctx.signal }}"
+  > memory.set: intent.map[ctx.signal] = infer.intent(ctx.signal)
+  > emit: signal.intent.categorized
+[/when signal.intent.detect]
+
+[when signal.intent.categorized]
+  > memory.set: ctx.intent = intent.map[ctx.signal]
+  > memory.list.add: ctx.signal to: signal.intent.traces
+  > draw.label: "🔎 Signal: {{ ctx.signal }} ⇒ Intent: {{ ctx.intent }}"
+[/when signal.intent.categorized]
+
+[ui grammar.panel]
+  > draw.label: "📘 Symbolic Grammar Engine"
+  > draw.button: label = "Run Grammar Validation" signal = grammar.validate
+  > draw.button: label = "Extend Grammar" signal = grammar.evolve
+  > draw.button: label = "Intent Observer" signal = intent.observe
+  > draw.log: source = grammar.validation.errors
+[/ui grammar.panel]
+
+[/capsule language.grammar.symbolic]
+
+[capsule grammar.expand.variants]
+
+[trigger grammar.expand.variants /]
+
+[logic grammar.expand.variants]
+  > log: "🌱 Expanding grammar rule variants..."
+
+  - each: rule in grammar.ruleset
+    do:
+      > memory.append: grammar.evolution.log = "Expanded {{ rule.name }}"
+      > emit: grammar.rule.expanded name = rule.name
+[/logic grammar.expand.variants]
+
+[/capsule grammar.expand.variants]
+
+[capsule grammar.crosslink.rules]
+
+[trigger grammar.crosslink.rules /]
+
+[logic grammar.crosslink.rules]
+  > log: "🔗 Crosslinking grammar rule dependencies..."
+
+  - each: rule in grammar.ruleset
+    do:
+      > memory.append: grammar.evolution.log = "Crosslinked {{ rule.name }}"
+      > emit: grammar.rule.crosslinked name = rule.name
+[/logic grammar.crosslink.rules]
+
+[/capsule grammar.crosslink.rules]
+
+[/capsule core12.languageLayer]
+[trigger intent.sync /]
+
+[logic intent.sync]
+  > log: "🚧 Trigger stub for intent.sync"
+[/logic intent.sync]
+
+[trigger grammar.introspect /]
+
+[logic grammar.introspect]
+  > log: "🚧 Trigger stub for grammar.introspect"
+[/logic grammar.introspect]
+
+[trigger grammar.bootstrap /]
+
+[logic grammar.bootstrap]
+  > log: "🚧 Trigger stub for grammar.bootstrap"
+[/logic grammar.bootstrap]
+
+[trigger grammar.coverage.complete /]
+
+[logic grammar.coverage.complete]
+  > log: "🚧 Trigger stub for grammar.coverage.complete"
+[/logic grammar.coverage.complete]
+
+[trigger intent.project /]
+
+[logic intent.project]
+  > log: "🚧 Trigger stub for intent.project"
+[/logic intent.project]
+
+[trigger grammar.rule.invalid /]
+
+[logic grammar.rule.invalid]
+  > log: "🚧 Trigger stub for grammar.rule.invalid"
+[/logic grammar.rule.invalid]
+
+[trigger semantic.bootstrap /]
+
+[logic semantic.bootstrap]
+  > log: "🚧 Trigger stub for semantic.bootstrap"
+[/logic semantic.bootstrap]
+
+[trigger grammar.suggest /]
+
+[logic grammar.suggest]
+  > log: "🚧 Trigger stub for grammar.suggest"
+[/logic grammar.suggest]
+
+[trigger grammar.validate.pass /]
+
+[logic grammar.validate.pass]
+  > log: "🚧 Trigger stub for grammar.validate.pass"
+[/logic grammar.validate.pass]
+
+[trigger grammar.rule.crosslinked /]
+
+[logic grammar.rule.crosslinked]
+  > log: "🚧 Trigger stub for grammar.rule.crosslinked"
+[/logic grammar.rule.crosslinked]
+
+[trigger grammar.validate.fail /]
+
+[logic grammar.validate.fail]
+  > log: "🚧 Trigger stub for grammar.validate.fail"
+[/logic grammar.validate.fail]
+
+[trigger semantic.suggest /]
+
+[logic semantic.suggest]
+  > log: "🚧 Trigger stub for semantic.suggest"
+[/logic semantic.suggest]
+
+[trigger grammar.rule.expanded /]
+
+[logic grammar.rule.expanded]
+  > log: "🚧 Trigger stub for grammar.rule.expanded"
+[/logic grammar.rule.expanded]
+
+[trigger semantic.reflect /]
+
+[logic semantic.reflect]
+  > log: "🚧 Trigger stub for semantic.reflect"
+[/logic semantic.reflect]
+
+[trigger signal.intent.categorized /]
+
+[logic signal.intent.categorized]
+  > log: "🚧 Trigger stub for signal.intent.categorized"
+[/logic signal.intent.categorized]
+
+[logic emit.signal.intent.detect]
+  > emit: signal.intent.detect
+  > log: "🚧 Emit stub for signal.intent.detect"
+[/logic emit.signal.intent.detect]
+
+[logic emit.intent.define]
+  > emit: intent.define
+  > log: "🚧 Emit stub for intent.define"
+[/logic emit.intent.define]
+
+[logic emit.grammar.evolve]
+  > emit: grammar.evolve
+  > log: "🚧 Emit stub for grammar.evolve"
+[/logic emit.grammar.evolve]
+
+[logic emit.semantic.resolve]
+  > emit: semantic.resolve
+  > log: "🚧 Emit stub for semantic.resolve"
+[/logic emit.semantic.resolve]
+
+[logic emit.intent.observe]
+  > emit: intent.observe
+  > log: "🚧 Emit stub for intent.observe"
+[/logic emit.intent.observe]

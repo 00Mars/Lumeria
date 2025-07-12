@@ -1,0 +1,601 @@
+[capsule core14.storyEngine]
+
+[capsule storyEngine.boot]
+
+[trigger boot.storyMemory /]
+[trigger boot.storyEngine /]
+
+[logic storyEngine.boot]
+  > log: "📚 Booting Story Engine Layer..."
+  > emit: story.init
+  > emit: story.loop
+  > emit: narrative.init
+  > emit: causality.trace  # Patch to resolve orphan trigger
+[/logic storyEngine.boot]
+
+[/capsule storyEngine.boot]
+
+[capsule story.event]
+
+[trigger story.event. /]
+
+[logic story.event]
+  > log: "📖 Event triggered: {{ ctx }}"
+  > memory.append: narrative.log = ctx
+[/logic story.event]
+
+[/capsule story.event]
+
+
+[capsule storyEngine.memory]
+
+[trigger story.init /]
+[trigger story.loop /]
+[trigger story.observe /]
+[trigger story.trace.append /]
+[trigger story.mood.record /]
+[trigger story.event.snapshot /]
+[trigger story.debug /]
+
+[memory story.trace /]
+[memory story.mood.flow /]
+[memory story.events /]
+[memory story.log /]
+[memory story.state /]
+[memory story.active /]
+[memory story.chapter /]
+[memory story.progress /]
+[memory story.branch /]
+[memory story.choices /]
+[memory story.arcs /]
+[memory story.last.signal /]
+[memory story.last.mood /]
+[memory story.last.scene /]
+
+[logic storyEngine.memory]
+
+[when story.init]
+  > log: "📚 [story] Initializing narrative trace memory..."
+  > memory.scope: story
+  > memory.set story.trace = []
+  > memory.set story.mood.flow = []
+  > memory.set story.events = []
+  > memory.set story.log = []
+  > memory.set story.state = "begin"
+  > emit: story.ready
+
+[when story.loop]
+  > emit: story.observe
+  > wait: 250ms
+  > emit: story.loop
+
+[when story.observe]
+  > log: "📚 [story] Observing symbolic narrative events..."
+  [condition signal.exists]
+    check: memory.current_signal exists
+    then: > emit: story.trace.append
+  [condition mood.exists]
+    check: memory.mood.state exists
+    then: > emit: story.mood.record
+  [condition scene.exists]
+    check: memory.visual.scene exists
+    then: > emit: story.event.snapshot
+
+[when story.trace.append]
+  > memory.list.add: story.trace = memory.current_signal
+  > memory.set: story.last.signal = memory.current_signal
+
+[when story.mood.record]
+  > memory.list.add: story.mood.flow = memory.mood.state
+  > memory.set: story.last.mood = memory.mood.state
+
+[when story.event.snapshot]
+  > memory.list.add: story.events = {
+      time: now(),
+      scene: memory.visual.scene,
+      mood: memory.mood.state,
+      signal: memory.current_signal
+    }
+  > memory.set: story.last.scene = memory.visual.scene
+
+[when story.debug]
+  > log: "🧾 Trace Log:"
+  > for.each: story.trace as s
+    do: > log: "🔹 {{s}}"
+  > log: "🌊 Mood Flow:"
+  > for.each: story.mood.flow as m
+    do: > log: "🌀 {{m}}"
+  > log: "🧠 Event Snapshots:"
+  > for.each: story.events as e
+    do: > log: "📸 {{e.time}} | {{e.scene}} | {{e.signal}} | {{e.mood}}"
+
+[/logic storyEngine.memory]
+
+[/capsule storyEngine.memory]
+
+[capsule storyEngine.narrative]
+
+[trigger narrative.init /]
+[trigger narrative.record /]
+[trigger narrative.reflect /]
+[trigger narrative.snapshot /]
+[trigger narrative.resume /]
+[trigger mood.flow.capture /]
+[trigger narrative.debug /]
+
+[memory narrative.log /]
+[memory narrative.state /]
+
+[logic storyEngine.narrative]
+
+[when narrative.init]
+  > memory.set: narrative.log = []
+  > memory.set: narrative.state = "begin"
+  > draw.label: "📘 Narrative memory initialized"
+
+[when narrative.record]
+  > memory.list.add: narrative.log = ctx.entry
+  > memory.set: narrative.state = ctx.entry.state
+  > draw.label: "📝 Recorded: {{ ctx.entry.description }}"
+
+[when narrative.reflect]
+  > draw.label: "🔍 Story so far..."
+  > draw.append: narrative.log
+  > draw.label: "🔮 Current state: {{ narrative.state }}"
+
+[when narrative.snapshot]
+  > memory.save file = "story.snapshot.lum" from = narrative.log
+  > draw.label: "📦 Narrative snapshot saved"
+
+[when narrative.resume]
+  > memory.load file = "story.snapshot.lum" into = narrative.log
+  > draw.label: "📖 Narrative resumed"
+
+[when mood.flow.capture]
+  > memory.list.add: narrative.log = {
+      type: "mood",
+      mood: ctx.mood,
+      timestamp: now()
+    }
+  > draw.label: "🎭 Mood captured: {{ ctx.mood }}"
+
+[when narrative.debug]
+  > draw.label: "🧠 Narrative Debug:"
+  > draw.append: narrative.log
+  > draw.label: "🌟 Current Mood Flow:"
+  > draw.append: filter(narrative.log, x => x.type == "mood")
+
+[/logic storyEngine.narrative]
+
+[/capsule storyEngine.narrative]
+
+[capsule storyEngine.control]
+
+[trigger story.begin /]
+[trigger story.next /]
+[trigger story.choose /]
+[trigger story.resolveChoice /]
+[trigger story.memory /]
+[trigger story.rewind /]
+[trigger story.logEvent /]
+[trigger story.afterLog /]
+[trigger story.reflect /]
+[trigger story.continue /]
+[trigger story.branch /]
+[trigger story.progress /]
+[trigger story.arc.define /]
+[trigger story.arc.reveal /]
+
+[logic storyEngine.control]
+
+[when story.begin]
+  [condition chapterMode]
+    check: ctx.chapter exists
+    then:
+      > memory.set story.chapter = ctx.chapter
+      > memory.set story.progress[ctx.chapter] = []
+      > emit: story.chapter.{{ ctx.chapter }}
+    else:
+      > memory.set story.active = true
+      > memory.set story.trace = []
+      > emit: story.next
+
+[when story.next]
+  > memory.set currentPlot = fetch.plotPoint(ctx.story_id)
+  > draw.label: "{{ currentPlot.description }}"
+  > draw.options: currentPlot.choices
+
+[when story.choose]
+  > memory.set story.trace += ctx.choice
+  > emit: story.resolveChoice
+
+[when story.resolveChoice]
+  > memory.set ctx.story_id = ctx.choice.next
+  > emit: story.next
+
+[when story.memory]
+  > draw.label: "📚 Story So Far:"
+  > draw.append: story.trace
+
+[when story.rewind]
+  > memory.set story.trace = story.trace[0..-2]
+  > emit: story.next
+
+[when story.logEvent]
+  > memory.set story.log += {
+      time: now(),
+      signal: ctx.signal,
+      context: ctx,
+      mood: memory.get("mood"),
+      scene: memory.get("scene.current")
+    }
+  > emit: story.afterLog
+
+[when story.afterLog]
+  > draw.label: "📘 Logged event: {{ ctx.signal }}"
+
+[when story.reflect]
+  > draw.label: "🌀 Reflecting on past symbolic events..."
+  > draw.append: story.log
+
+[when story.continue]
+  > memory.set lastEvent = story.log[-1]
+  > emit: {{ lastEvent.signal }}
+
+[when story.branch]
+  [condition ctx.prompt exists]
+    then:
+      > draw.label: "🔀 Choose your path:"
+      > input: "{{ ctx.prompt }}"
+      > memory.set story.choices[ctx.id] = "{{ input }}"
+      > emit: story.choice.{{ ctx.id }}.{{ input }}
+    else:
+      > input: "What outcome did you envision?"
+      > memory.set story.branch[ctx.signal] = input
+      > draw.label: "🌱 Branch recorded for '{{ ctx.signal }}' → '{{ input }}'"
+
+[when story.progress]
+  > memory.append story.progress[ctx.chapter], ctx.event
+  > draw.label: "📖 Progressed: {{ ctx.event }}"
+  > emit: story.event.{{ ctx.event }}
+
+[when story.arc.define]
+  > memory.set story.arcs[ctx.name] = ctx.structure
+  > draw.label: "📚 Arc '{{ ctx.name }}' defined"
+
+[when story.arc.reveal]
+  > draw.label: "✨ Story Arc: {{ ctx.name }}"
+  > draw.append: story.arcs[ctx.name]
+
+[/logic storyEngine.control]
+
+[/capsule storyEngine.control]
+
+[capsule storyEngine.causality]
+
+[trigger causality.capture /]
+[trigger causality.link /]
+[trigger causality.explain /]
+[trigger causality.trace /]
+[trigger causality.trace.step /]
+[trigger causality.visualize /]
+[trigger cause.trigger /]
+[trigger cause.define /]
+
+[memory causeEffectMap /]
+[memory causal.link /]
+[memory causes /]
+[memory traceStart /]
+
+[logic storyEngine.causality]
+
+[when causality.capture]
+  > memory.set causeEffectMap += {
+      cause: ctx.previousSignal,
+      effect: ctx.signal,
+      timestamp: now(),
+      mood: memory.get("mood"),
+      scene: memory.get("scene.current")
+    }
+
+[when causality.link]
+  > memory.set causal.link[ctx.cause] = ctx.effect
+  > draw.label: "🔗 Linked '{{ ctx.cause }}' → '{{ ctx.effect }}'"
+
+[when causality.explain]
+  > draw.label: "📎 Explaining causality:"
+  > draw.append: causeEffectMap
+
+[when causality.trace]
+  > input: "Trace cause of which signal?"
+  > memory.set traceStart = input
+  > emit: causality.trace.step
+
+[when causality.trace.step]
+  > memory.set effect = causal.link[traceStart]
+  > draw.label: "🧩 {{ traceStart }} led to → {{ effect }}"
+  > memory.set traceStart = effect
+  [condition trace.continues]
+    check: causal.link[traceStart] exists
+    then: > emit: causality.trace.step
+
+[when causality.visualize]
+  > draw.graph: data = causeEffectMap, axes = ["cause", "effect"]
+
+[when cause.trigger]
+  [condition cause.exists]
+    check: ctx.cause in memory.causes
+    then:
+      > memory.set result = memory.causes[ctx.cause]
+      > emit: story.progress chapter=ctx.chapter event=result
+
+[when cause.define]
+  > memory.set causes[ctx.cause] = ctx.effect
+  > draw.label: "🧠 Cause linked: {{ ctx.cause }} → {{ ctx.effect }}"
+
+[/logic storyEngine.causality]
+
+[/capsule storyEngine.causality]
+
+[capsule storyEngine.context]
+
+[trigger narrative.context.init /]
+[trigger narrative.context.append /]
+[trigger narrative.context.inject /]
+[trigger narrative.context.extract /]
+[trigger narrative.context.label /]
+[trigger narrative.context.clear /]
+
+[memory narrative.context.id /]
+[memory narrative.context.timestamp /]
+[memory narrative.context.trace /]
+
+[logic storyEngine.context]
+
+[when narrative.context.init]
+  > log: "[narrative] Initializing narrative context"
+  > memory.set narrative.context.id = generate.uuid
+  > memory.set narrative.context.timestamp = now
+  > memory.set narrative.context.trace = []
+  > emit: narrative.context.ready
+
+[when narrative.context.append]
+  > memory.list.add: ctx.entry to: narrative.context.trace
+  > log: "[narrative] Appended trace entry: {{ ctx.entry }}"
+
+[when narrative.context.inject]
+  > memory.set: narrative.context.trace = ctx.trace
+  > memory.set: narrative.context.id = ctx.id
+  > memory.set: narrative.context.timestamp = ctx.timestamp
+  > log: "[narrative] Injected external context with ID {{ ctx.id }}"
+
+[when narrative.context.extract]
+  > memory.set: ctx.out = {
+      id: narrative.context.id,
+      timestamp: narrative.context.timestamp,
+      trace: narrative.context.trace
+    }
+  > emit: ctx.returnTo
+
+[when narrative.context.label]
+  > draw.label: "📖 Context Trace ID: {{ narrative.context.id }}"
+  > draw.label: "🧩 Entries: {{ length(narrative.context.trace) }}"
+
+[when narrative.context.clear]
+  > memory.set narrative.context.trace = []
+  > log: "[narrative] Context trace cleared"
+
+[/logic storyEngine.context]
+
+[/capsule storyEngine.context]
+
+[capsule storyEngine.threads]
+
+[trigger weave.begin /]
+[trigger weave.progress /]
+[trigger weave.checkpoint /]
+
+[memory narrative.threads /]
+[memory narrative.current /]
+
+[logic storyEngine.threads]
+
+[when weave.begin]
+  > memory.set: narrative.current = ctx.title
+  > memory.list.add: ctx.title to: narrative.threads
+  > log: "[🧵] Narrative thread '{{ ctx.title }}' started"
+  > emit: weave.progress
+
+[when weave.progress]
+  > memory.append: narrative.log with ctx.event
+  > draw.label: "📖 {{ ctx.event }}"
+  > emit: weave.checkpoint
+
+[when weave.checkpoint]
+  > memory.save file = "narrative_{{ narrative.current }}.lum" from = narrative
+  > log: "[📍] Narrative checkpoint saved: {{ narrative.current }}"
+
+[/logic storyEngine.threads]
+
+[/capsule storyEngine.threads]
+
+[/capsule core14.storyEngine]
+[trigger story.chapter. /]
+
+[logic story.chapter.]
+  > log: "🚧 Trigger stub for story.chapter."
+[/logic story.chapter.]
+
+[trigger ctx.returnTo /]
+
+[logic ctx.returnTo]
+  > log: "🚧 Trigger stub for ctx.returnTo"
+[/logic ctx.returnTo]
+
+[trigger story.choice. /]
+
+[logic story.choice.]
+  > log: "🚧 Trigger stub for story.choice."
+[/logic story.choice.]
+
+[trigger story.ready /]
+
+[logic story.ready]
+  > log: "🚧 Trigger stub for story.ready"
+[/logic story.ready]
+
+[trigger narrative.context.ready /]
+
+[logic narrative.context.ready]
+  > log: "🚧 Trigger stub for narrative.context.ready"
+[/logic narrative.context.ready]
+
+[logic emit.weave.begin]
+  > emit: weave.begin
+  > log: "🚧 Emit stub for weave.begin"
+[/logic emit.weave.begin]
+
+[logic emit.narrative.context.init]
+  > emit: narrative.context.init
+  > log: "🚧 Emit stub for narrative.context.init"
+[/logic emit.narrative.context.init]
+
+[logic emit.story.rewind]
+  > emit: story.rewind
+  > log: "🚧 Emit stub for story.rewind"
+[/logic emit.story.rewind]
+
+[logic emit.story.begin]
+  > emit: story.begin
+  > log: "🚧 Emit stub for story.begin"
+[/logic emit.story.begin]
+
+[logic emit.story.arc.reveal]
+  > emit: story.arc.reveal
+  > log: "🚧 Emit stub for story.arc.reveal"
+[/logic emit.story.arc.reveal]
+
+[logic emit.narrative.debug]
+  > emit: narrative.debug
+  > log: "🚧 Emit stub for narrative.debug"
+[/logic emit.narrative.debug]
+
+[logic emit.causality.visualize]
+  > emit: causality.visualize
+  > log: "🚧 Emit stub for causality.visualize"
+[/logic emit.causality.visualize]
+
+[logic emit.narrative.context.inject]
+  > emit: narrative.context.inject
+  > log: "🚧 Emit stub for narrative.context.inject"
+[/logic emit.narrative.context.inject]
+
+[logic emit.narrative.snapshot]
+  > emit: narrative.snapshot
+  > log: "🚧 Emit stub for narrative.snapshot"
+[/logic emit.narrative.snapshot]
+
+[logic emit.boot.storyEngine]
+  > emit: boot.storyEngine
+  > log: "🚧 Emit stub for boot.storyEngine"
+[/logic emit.boot.storyEngine]
+
+[logic emit.causality.link]
+  > emit: causality.link
+  > log: "🚧 Emit stub for causality.link"
+[/logic emit.causality.link]
+
+[logic emit.story.continue]
+  > emit: story.continue
+  > log: "🚧 Emit stub for story.continue"
+[/logic emit.story.continue]
+
+[logic emit.narrative.context.label]
+  > emit: narrative.context.label
+  > log: "🚧 Emit stub for narrative.context.label"
+[/logic emit.narrative.context.label]
+
+[logic emit.cause.trigger]
+  > emit: cause.trigger
+  > log: "🚧 Emit stub for cause.trigger"
+[/logic emit.cause.trigger]
+
+[logic emit.causality.capture]
+  > emit: causality.capture
+  > log: "🚧 Emit stub for causality.capture"
+[/logic emit.causality.capture]
+
+[logic emit.mood.flow.capture]
+  > emit: mood.flow.capture
+  > log: "🚧 Emit stub for mood.flow.capture"
+[/logic emit.mood.flow.capture]
+
+[logic emit.story.arc.define]
+  > emit: story.arc.define
+  > log: "🚧 Emit stub for story.arc.define"
+[/logic emit.story.arc.define]
+
+[logic emit.story.reflect]
+  > emit: story.reflect
+  > log: "🚧 Emit stub for story.reflect"
+[/logic emit.story.reflect]
+
+[logic emit.story.memory]
+  > emit: story.memory
+  > log: "🚧 Emit stub for story.memory"
+[/logic emit.story.memory]
+
+[logic emit.narrative.reflect]
+  > emit: narrative.reflect
+  > log: "🚧 Emit stub for narrative.reflect"
+[/logic emit.narrative.reflect]
+
+[logic emit.causality.explain]
+  > emit: causality.explain
+  > log: "🚧 Emit stub for causality.explain"
+[/logic emit.causality.explain]
+
+[logic emit.narrative.context.clear]
+  > emit: narrative.context.clear
+  > log: "🚧 Emit stub for narrative.context.clear"
+[/logic emit.narrative.context.clear]
+
+[logic emit.story.logEvent]
+  > emit: story.logEvent
+  > log: "🚧 Emit stub for story.logEvent"
+[/logic emit.story.logEvent]
+
+[logic emit.narrative.record]
+  > emit: narrative.record
+  > log: "🚧 Emit stub for narrative.record"
+[/logic emit.narrative.record]
+
+[logic emit.narrative.resume]
+  > emit: narrative.resume
+  > log: "🚧 Emit stub for narrative.resume"
+[/logic emit.narrative.resume]
+
+[logic emit.cause.define]
+  > emit: cause.define
+  > log: "🚧 Emit stub for cause.define"
+[/logic emit.cause.define]
+
+[logic emit.story.branch]
+  > emit: story.branch
+  > log: "🚧 Emit stub for story.branch"
+[/logic emit.story.branch]
+
+[logic emit.narrative.context.append]
+  > emit: narrative.context.append
+  > log: "🚧 Emit stub for narrative.context.append"
+[/logic emit.narrative.context.append]
+
+[logic emit.narrative.context.extract]
+  > emit: narrative.context.extract
+  > log: "🚧 Emit stub for narrative.context.extract"
+[/logic emit.narrative.context.extract]
+
+[logic emit.story.choose]
+  > emit: story.choose
+  > log: "🚧 Emit stub for story.choose"
+[/logic emit.story.choose]

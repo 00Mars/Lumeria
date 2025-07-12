@@ -1,0 +1,319 @@
+[capsule core18.choiceLogic]
+
+[capsule choice.evaluate]
+[trigger signal: choice.evaluate /]
+[logic choice.evaluate]
+  condition: ctx.options.length == 1
+    do:
+      > memory.set choice.result = ctx.options[0]
+      > emit: choice.resolved
+
+  condition: ctx.options.length > 1
+    do:
+      > draw.options: ctx.options
+[/logic choice.evaluate]
+[/capsule choice.evaluate]
+
+[capsule choice.pick]
+[trigger signal: choice.pick /]
+[logic choice.pick]
+  > memory.set choice.result = ctx.selection
+  > emit: choice.resolved
+[/logic choice.pick]
+[/capsule choice.pick]
+
+[capsule choice.resolved]
+[trigger signal: choice.resolved /]
+[logic choice.resolved]
+  > draw.label: "🌀 Choice resolved: {{ choice.result }}"
+  > emit: ctx.nextSignal
+[/logic choice.resolved]
+[/capsule choice.resolved]
+
+[capsule choice.probabilistic]
+[trigger signal: choice.probabilistic /]
+[logic choice.probabilistic]
+  > memory.set choice.result = random.pick(ctx.options, ctx.weights)
+  > emit: choice.resolved
+[/logic choice.probabilistic]
+[/capsule choice.probabilistic]
+
+[capsule choice.auto]
+[trigger signal: choice.auto /]
+[logic choice.auto]
+  > memory.set choice.result = ctx.default
+  > emit: choice.resolved
+[/logic choice.auto]
+[/capsule choice.auto]
+
+[capsule logic.fuse]
+[trigger signal: logic.fuse /]
+[logic logic.fuse]
+  > memory.set logic.source = ctx.source
+  > memory.set logic.target = ctx.target
+  > emit: logic.merge
+[/logic logic.fuse]
+[/capsule logic.fuse]
+
+[capsule logic.merge]
+[trigger signal: logic.merge /]
+[logic logic.merge]
+  > draw.label: "🧠 Merging logic from {{ logic.source }} into {{ logic.target }}"
+  > memory.set logic.target.rules += logic.source.rules
+  > emit: logic.fused
+[/logic logic.merge]
+[/capsule logic.merge]
+
+[capsule logic.fused]
+[trigger signal: logic.fused /]
+[logic logic.fused]
+  > log: "[logic] Fusion complete for {{ logic.target }}"
+[/logic logic.fused]
+[/capsule logic.fused]
+
+[capsule logic.evaluate]
+[trigger signal: logic.evaluate /]
+[logic logic.evaluate]
+  condition: ctx.rule in memory.logic.rules
+    do:
+      > emit: logic.pass
+
+  condition: ctx.rule not in memory.logic.rules
+    do:
+      > emit: logic.fail
+[/logic logic.evaluate]
+[/capsule logic.evaluate]
+
+[capsule logic.pass]
+[trigger signal: logic.pass /]
+[logic logic.pass]
+  > log: "[✔] Logic check passed for '{{ ctx.rule }}'"
+[/logic logic.pass]
+[/capsule logic.pass]
+
+[capsule logic.fail]
+[trigger signal: logic.fail /]
+[logic logic.fail]
+  > log: "[✘] Logic check failed for '{{ ctx.rule }}'"
+[/logic logic.fail]
+[/capsule logic.fail]
+
+[capsule linguistic.setMode]
+[trigger signal: linguistic.setMode /]
+[logic linguistic.setMode]
+  > memory.set linguistics.mode = ctx.mode
+  > draw.label: "✍️ Linguistic mode set to: {{ ctx.mode }}"
+[/logic linguistic.setMode]
+[/capsule linguistic.setMode]
+
+[capsule linguistic.describe]
+[trigger signal: linguistic.describe /]
+[logic linguistic.describe]
+  - if: linguistics.mode == "poetic"
+    > draw.label: "🌸 In whispers and waves, {{ ctx.subject }} becomes {{ ctx.essence }}"
+  - if: linguistics.mode == "mythic"
+    > draw.label: "⚔️ Long ago, {{ ctx.subject }} bore the name {{ ctx.essence }} in realms untold"
+  - if: linguistics.mode == "technical"
+    > draw.label: "📘 {{ ctx.subject }} is defined as: {{ ctx.essence }}"
+  - if: linguistics.mode == "emotional"
+    > draw.label: "❤️ It felt like {{ ctx.essence }} when {{ ctx.subject }} appeared"
+  - else:
+    > draw.label: "{{ ctx.subject }} = {{ ctx.essence }}"
+[/logic linguistic.describe]
+[/capsule linguistic.describe]
+
+[capsule linguistic.availableModes]
+[trigger signal: linguistic.availableModes /]
+[logic linguistic.availableModes]
+  > draw.label: "Available modes:"
+  > draw.append:
+      - poetic
+      - mythic
+      - technical
+      - emotional
+      - neutral
+[/logic linguistic.availableModes]
+[/capsule linguistic.availableModes]
+
+[capsule mirror.reflect]
+[trigger signal: mirror.reflect /]
+[logic mirror.reflect]
+  > draw.label: "🪞 Reflecting current symbolic state"
+  > memory.snapshot: current into = mirror.reflection
+  > emit: mirror.project
+[/logic mirror.reflect]
+[/capsule mirror.reflect]
+
+[capsule mirror.project]
+[trigger signal: mirror.project /]
+[logic mirror.project]
+  > draw.scene: mirrorWorld
+  > draw.append: mirror.reflection
+  > log: "[mirror] Projected mirrored reality"
+[/logic mirror.project]
+[/capsule mirror.project]
+
+[capsule mirror.invert]
+[trigger signal: mirror.invert /]
+[logic mirror.invert]
+  > memory.set mirror.inverted = invert.memory(mirror.reflection)
+  > draw.append: mirror.inverted
+  > emit: mirror.realityCheck
+[/logic mirror.invert]
+[/capsule mirror.invert]
+
+[capsule mirror.collapse]
+[trigger signal: mirror.collapse /]
+[logic mirror.collapse]
+  > memory.set: memory = mirror.reflection
+  > log: "[mirror] Collapsed mirror reality into live state"
+[/logic mirror.collapse]
+[/capsule mirror.collapse]
+
+[capsule choiceLogic.boot]
+[trigger choiceLogic.boot /]
+[logic choiceLogic.boot]
+  > log: "🧠 [choice] Initializing symbolic decision framework..."
+  > emit: choiceLogic.init
+[/logic choiceLogic.boot]
+[/capsule choiceLogic.boot]
+
+[capsule choiceLogic.init]
+[trigger choiceLogic.init /]
+[memory choice.history /]
+[memory choice.current /]
+[memory choice.outcome.map /]
+[memory choice.option.set /]
+[logic choiceLogic.init]
+  > memory.set: choice.history = []
+  > memory.set: choice.current = null
+  > memory.set: choice.outcome.map = {}
+  > memory.set: choice.option.set = []
+  > emit: choiceLogic.idle
+[/logic choiceLogic.init]
+[/capsule choiceLogic.init]
+
+[capsule choiceLogic.idle]
+[trigger choiceLogic.idle /]
+[logic choiceLogic.idle]
+  > draw.label: "🤔 Awaiting symbolic decision input"
+[/logic choiceLogic.idle]
+[/capsule choiceLogic.idle]
+
+[capsule choiceLogic.input]
+[trigger choice.input /]
+[logic choiceLogic.input]
+  > memory.set: choice.current = ctx.choice
+  > memory.append: choice.history = ctx.choice
+  > emit: choice.evaluate choice = ctx.choice
+[/logic choiceLogic.input]
+[/capsule choiceLogic.input]
+
+[capsule choice.evaluate]
+[trigger choice.evaluate /]
+[logic choice.evaluate]
+  [condition has.outcome.map]
+    check: ctx.choice in choice.outcome.map
+    then:
+      > emit: choiceLogic.resolve outcome = choice.outcome.map[ctx.choice]
+    else:
+      > emit: choiceLogic.learn
+  [/condition has.outcome.map]
+[/logic choice.evaluate]
+[/capsule choice.evaluate]
+
+[capsule choiceLogic.learn]
+[trigger choiceLogic.learn /]
+[logic choiceLogic.learn]
+  > log: "🧠 [choice] Learning from new symbolic input"
+  > draw.label: "🧠 Learning new choice outcome..."
+  > memory.set: choice.outcome.map[choice.current] = infer.outcome(choice.current)
+[/logic choiceLogic.learn]
+[/capsule choiceLogic.learn]
+
+[capsule choiceLogic.resolve]
+[trigger choiceLogic.resolve /]
+[logic choiceLogic.resolve]
+  > log: "🎯 [choice] Resolving to outcome: {{ ctx.outcome }}"
+  > draw.label: "🎯 Choice: {{ choice.current }} → Outcome: {{ ctx.outcome }}"
+  > emit: ctx.outcome
+[/logic choiceLogic.resolve]
+[/capsule choiceLogic.resolve]
+
+[capsule choice.debug]
+[trigger choice.debug /]
+[logic choice.debug]
+  > draw.log: source = choice.history
+  > draw.table: source = choice.outcome.map
+[/logic choice.debug]
+[/capsule choice.debug]
+
+[/capsule core18.choiceLogic]
+[trigger logic.fused /]
+
+[logic logic.fused]
+  > log: "🚧 Trigger stub for logic.fused"
+[/logic logic.fused]
+
+[trigger logic.pass /]
+
+[logic logic.pass]
+  > log: "🚧 Trigger stub for logic.pass"
+[/logic logic.pass]
+
+[trigger ctx.nextSignal /]
+
+[logic ctx.nextSignal]
+  > log: "🚧 Trigger stub for ctx.nextSignal"
+[/logic ctx.nextSignal]
+
+[trigger mirror.realityCheck /]
+
+[logic mirror.realityCheck]
+  > log: "🚧 Trigger stub for mirror.realityCheck"
+[/logic mirror.realityCheck]
+
+[trigger logic.fail /]
+
+[logic logic.fail]
+  > log: "🚧 Trigger stub for logic.fail"
+[/logic logic.fail]
+
+[trigger choice.resolved /]
+
+[logic choice.resolved]
+  > log: "🚧 Trigger stub for choice.resolved"
+[/logic choice.resolved]
+
+[trigger mirror.project /]
+
+[logic mirror.project]
+  > log: "🚧 Trigger stub for mirror.project"
+[/logic mirror.project]
+
+[trigger logic.merge /]
+
+[logic logic.merge]
+  > log: "🚧 Trigger stub for logic.merge"
+[/logic logic.merge]
+
+[trigger ctx.outcome /]
+
+[logic ctx.outcome]
+  > log: "🚧 Trigger stub for ctx.outcome"
+[/logic ctx.outcome]
+
+[logic emit.choice.debug]
+  > emit: choice.debug
+  > log: "🚧 Emit stub for choice.debug"
+[/logic emit.choice.debug]
+
+[logic emit.choice.input]
+  > emit: choice.input
+  > log: "🚧 Emit stub for choice.input"
+[/logic emit.choice.input]
+
+[logic emit.choiceLogic.boot]
+  > emit: choiceLogic.boot
+  > log: "🚧 Emit stub for choiceLogic.boot"
+[/logic emit.choiceLogic.boot]

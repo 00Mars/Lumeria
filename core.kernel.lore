@@ -1,0 +1,614 @@
+[capsule core.execution.symbolic.kernel]
+
+[meta kernel]
+  set: type = kernel
+  set: version = 1.1
+  set: author = system.lumeria
+  set: purpose = "Recursive symbolic cognition and execution kernel. Merges dream logic, capsule evolution, quantum branching, entropy regulation, glyph mapping, sandboxing, and firewall control into a single reflective post-CPU architecture."
+[/meta kernel]
+
+[trigger system.boot /]
+[trigger boot.ready /]
+[trigger pulse.tick /]
+[trigger kernel.idle /]
+[trigger kernel.execution.loop /]
+[trigger signal.incoming /]
+[trigger signal.render /]
+[trigger signal.allow /]
+[trigger signal.block /]
+[trigger quantum.branch. /]
+[trigger quantum.branch.resolve /]
+[trigger quantum.branch.resolved /]
+[trigger evolve.kernel.init /]
+[trigger evolve.population /]
+[trigger evolve.capsule.generate /]
+[trigger evolve.evaluate.fitness /]
+[trigger evolve.fitness.score /]
+[trigger evolve.select.best /]
+[trigger evolve.apply /]
+[trigger evolve.cycle.next /]
+[trigger evolve.cycle.trigger /]
+[trigger evolve.injectFitnessFn /]
+[trigger permissions.require /]
+[trigger permissions.granted /]
+[trigger permissions.denied /]
+[trigger audit.log /]
+[trigger require.entitlement /]
+[trigger cap.token.create /]
+[trigger cap.token.validate /]
+[trigger cap.revoke /]
+[trigger capsule.sandbox /]
+[trigger capsule.quarantine /]
+[trigger ghost.listen /]
+[trigger ghost.replay /]
+[trigger cognition.reflect /]
+[trigger dream.loop.tick /]
+[trigger dream.reflect /]
+[trigger cognition.glyph.reflect /]
+[trigger cognition.glyph.init /]
+[trigger kernel.reflect.init /]
+[trigger dream.loop.init /]
+[trigger entropy.regulate /]
+[trigger entropy.optimize /]
+[trigger entropy.measure /]
+[trigger security.evolution /]
+[trigger glyph.propagate /]
+[trigger glyph.listen /]
+[trigger quantum.echo /]
+[trigger quantum.mesh.link /]
+[trigger substrate.resolve /]
+[trigger interface.bridge /]
+
+[memory signal.queue /]
+[memory signal.active /]
+[memory signal.history /]
+[memory signal.echo /]
+[memory signal.firewall.allowlist /]
+[memory signal.firewall.blocklist /]
+[memory execution.flow /]
+[memory kernel.execution.flow /]
+[memory kernel.branches /]
+[memory kernel.lastBranch /]
+[memory kernel.self /]
+[memory kernel.subroutines /]
+[memory ghost.trace /]
+[memory boot.clock /]
+[memory symbolic.environment /]
+[memory flow.registry /]
+[memory memory.echo.log /]
+[memory capsule.usage.stats /]
+[memory capsule.affinity.map /]
+[memory firewall.evolution /]
+[memory evolve.population /]
+[memory evolve.history /]
+[memory evolve.fitnessResults /]
+[memory trust.tokens /]
+[memory trust.graph /]
+[memory entropy.level /]
+[memory entropy.history /]
+[memory entropy.snapshot /]
+[memory glyph.signature.map /]
+[memory glyph.whispers /]
+[memory quantum.echo.trail /]
+[memory quantum.branch.mesh /]
+[memory dream.journal /]
+[memory cognition.glyphMap /]
+[memory fitness.custom /]
+
+[logic kernel.init]
+  > log: "🧠 Initializing unified symbolic kernel..."
+  > memory.set: signal.queue = []
+  > memory.set: execution.flow = []
+  > memory.set: kernel.execution.flow = []
+  > memory.set: kernel.branches = []
+  > memory.set: kernel.lastBranch = null
+  > memory.set: capsule.usage.stats = {}
+  > memory.set: capsule.affinity.map = {}
+  > memory.set: firewall.evolution = {}
+  > memory.set: evolve.population = []
+  > memory.set: evolve.history = []
+  > memory.set: evolve.fitnessResults = []
+  > memory.set: trust.tokens = {}
+  > memory.set: ghost.trace = []
+  > memory.set: kernel.self.identity = "lumeria"
+  > memory.set: kernel.self.state = "awake"
+  > memory.set: kernel.self.timeline = []
+  > memory.set: boot.clock = now()
+  > memory.set: glyph.whispers = []
+  > memory.set: glyph.signature.map = {}
+  > memory.set: quantum.echo.trail = []
+  > memory.set: quantum.branch.mesh = {}
+  > memory.set: cognition.glyphMap = {}
+  > memory.set: dream.journal = []
+  > memory.set: entropy.history = []
+  > memory.set: entropy.snapshot = null
+  > memory.set: entropy.level = 0
+  > emit: cognition.glyph.init
+  > emit: dream.loop.init
+  > emit: kernel.execution.loop
+  > emit: quantum.branch.  # Patch to resolve orphan trigger
+[/logic kernel.init]
+
+[logic kernel.execution.loop]
+  [condition has.signal]
+    check: signal.queue not empty
+    then:
+      > memory.shift: signal.queue → signal.active
+      > memory.append: signal.history = signal.active
+      > memory.append: execution.flow = signal.active
+      > memory.append: kernel.execution.flow = signal.active
+      > emit: audit.log source = "kernel" action = signal.active
+      > emit: signal.active
+      > emit: kernel.execution.loop delay = 5ms
+  [/condition has.signal]
+
+  [condition idle]
+    check: signal.queue is empty
+    then:
+      > emit: kernel.idle
+[/logic kernel.execution.loop]
+
+[logic kernel.idle]
+  > emit: dream.loop.tick
+  > emit: cognition.reflect
+[/logic kernel.idle]
+
+[logic signal.incoming]
+  > emit: securityKernel.firewall.check signal = ctx.signal
+
+  [condition blocked]
+    check: ctx.signal in memory.signal.firewall.blocklist
+    then:
+      > memory.append: ghost.trace = ctx.signal
+      > log: "🧱 Blocked signal: {{ ctx.signal }}"
+  [/condition blocked]
+
+  [condition allowed]
+    check: ctx.signal in memory.signal.firewall.allowlist
+    then:
+      > memory.append: signal.queue = ctx.signal
+      > emit: glyph.propagate signal = ctx.signal
+      > log: "📨 Accepted signal: {{ ctx.signal }}"
+  [/condition allowed]
+
+  [condition ghosted]
+    check: ctx.signal not in memory.signal.firewall.allowlist
+    then:
+      > memory.append: ghost.trace = ctx.signal
+      > log: "👻 Ghosted signal: {{ ctx.signal }}"
+  [/condition ghosted]
+[/logic signal.incoming]
+
+[logic dream.loop.init]
+  > memory.set: dream.journal = []
+  > log: "🌙 Dream engine ready"
+[/logic dream.loop.init]
+
+[logic dream.loop.tick]
+  > memory.set: dream.entry = random(symbolic.environment)
+  > memory.append: dream.journal = dream.entry
+  > emit: dream.reflect entry = dream.entry
+[/logic dream.loop.tick]
+
+[logic dream.reflect]
+  > draw.label: "🔮 Dreaming: {{ ctx.entry }}"
+  > emit: cognition.glyph.reflect symbol = ctx.entry
+[/logic dream.reflect]
+
+[logic cognition.glyph.init]
+  > memory.set: cognition.glyphMap = {}
+  > log: "🔣 Loading glyph cognition matrix"
+[/logic cognition.glyph.init]
+
+[logic cognition.glyph.reflect]
+  > memory.set: cognition.glyphMap[ctx.symbol] = generate.interpretation(ctx.symbol)
+  > log: "🔡 Interpreted glyph: {{ ctx.symbol }} → {{ cognition.glyphMap[ctx.symbol] }}"
+[/logic cognition.glyph.reflect]
+
+[logic cognition.reflect]
+  > draw.label: "🧘 Reflecting on kernel state..."
+  > draw.log: source = signal.history
+  > draw.list: source = kernel.execution.flow
+[/logic cognition.reflect]
+
+[logic substrate.resolve]
+  > emit: symbolicSubstrate.resolve.memory
+  > emit: symbolicSubstrate.resolve.logic
+  > memory.set: symbolic.environment = ctx.env
+[/logic substrate.resolve]
+
+[logic signal.render]
+  > emit: interface.bridge symbol = ctx.symbol
+[/logic signal.render]
+
+[logic interface.bridge]
+  [condition label]
+    check: ctx.symbol matches draw.label:*
+    then: > emit: ui.render.label symbol = ctx.symbol
+  [/condition label]
+  [condition network]
+    check: ctx.symbol matches network.send:*
+    then: > emit: io.network.transmit symbol = ctx.symbol
+  [/condition network]
+  [condition hardware]
+    check: ctx.symbol matches device.*
+    then: > emit: hardware.driver.emit symbol = ctx.symbol
+  [/condition hardware]
+[/logic interface.bridge]
+
+[logic evolve.kernel.init]
+  > emit: evolve.population
+  > emit: evolve.evaluate.fitness
+  > emit: evolve.select.best
+[/logic evolve.kernel.init]
+
+[logic evolve.population]
+  > memory.set: evolve.population = []
+  - repeat: ctx.count or 5
+    do: > emit: evolve.capsule.generate
+[/logic evolve.population]
+
+[logic evolve.capsule.generate]
+  > memory.set: newCapsule = mutate(ctx.baseCapsule)
+  > memory.list.add evolve.population = newCapsule
+[/logic evolve.capsule.generate]
+
+[logic evolve.evaluate.fitness]
+  > memory.set: evolve.fitnessResults = []
+  - foreach: evolve.population
+    do:
+      > memory.set evolve.current = item
+      > emit: evolve.fitness.score
+[/logic evolve.evaluate.fitness]
+
+[logic evolve.fitness.score]
+  > memory.set evolve.score = call(ctx.fitnessFn or "defaultFitness", evolve.current)
+  > memory.list.add evolve.fitnessResults = { capsule: evolve.current, score: evolve.score }
+[/logic evolve.fitness.score]
+
+[logic evolve.select.best]
+  > memory.set evolve.fittest = max(evolve.fitnessResults by="score")
+  > memory.set evolve.winner = evolve.fittest.capsule
+  > emit: evolve.apply
+[/logic evolve.select.best]
+
+[logic evolve.apply]
+  > eval: evolve.winner
+  > memory.append: evolve.history += evolve.winner
+  > emit: evolve.cycle.next
+[/logic evolve.apply]
+
+[logic evolve.cycle.next]
+  condition: ctx.loop == true
+    do: > emit: evolve.kernel.init
+  condition: ctx.loop == false
+    do: > draw.label: "♻️ Evolution loop complete"
+[/logic evolve.cycle.next]
+
+[logic evolve.injectFitnessFn]
+  > memory.set fitness.custom = ctx.function
+  > log: "🧠 Custom fitness function injected"
+[/logic evolve.injectFitnessFn]
+
+[logic entropy.regulate]
+  > memory.set: entropy.snapshot = hash(memory)
+  > memory.list.add: entropy.history = entropy.snapshot
+  > memory.set: entropy.level = calc.entropy(memory)
+  > log: "🌡 Entropy level: {{ entropy.level }}"
+  [condition redundant]
+    check: entropy.snapshot in entropy.history[-5:-1]
+    then: > emit: entropy.optimize
+  [/condition redundant]
+[/logic entropy.regulate]
+
+[logic capsule.binding.heuristics]
+  - foreach: execution.flow
+    do: > memory.increment: capsule.usage.stats[item]
+  - foreach: capsule.usage.stats
+    do: > memory.set: capsule.affinity.map[key] = usage.score(item)
+[/logic capsule.binding.heuristics]
+
+[logic security.evolution]
+  > foreach: signal.history
+    do:
+      [condition blocked]
+        check: item in memory.signal.firewall.blocklist
+        then: > memory.increment: firewall.evolution[item].blocked
+      [/condition blocked]
+      [condition allowed]
+        check: item in memory.signal.firewall.allowlist
+        then: > memory.increment: firewall.evolution[item].allowed
+      [/condition allowed]
+  > log: "🔁 Security evolution pass complete"
+[/logic security.evolution]
+
+[logic signal.allow]
+  > memory.append: signal.firewall.allowlist = ctx.signal
+  > log: "✅ Signal allowed: {{ ctx.signal }}"
+[/logic signal.allow]
+
+[logic signal.block]
+  > memory.append: signal.firewall.blocklist = ctx.signal
+  > log: "⛔ Signal blocked: {{ ctx.signal }}"
+[/logic signal.block]
+
+[logic audit.log]
+  > memory.append audit.log += {
+      capsule: ctx.source,
+      action: ctx.action,
+      time: now()
+    }
+[/logic audit.log]
+
+[logic capsule.sandbox]
+  > fork.loot: ctx.target
+  > memory.set: {{ ctx.target }}.sandboxed = true
+  > draw.label: "📦 Sandboxed {{ ctx.target }}"
+[/logic capsule.sandbox]
+
+[logic capsule.quarantine]
+  > memory.set: {{ ctx.capsule }}.status = "quarantined"
+  > log: "⚠️ Quarantined capsule: {{ ctx.capsule }}"
+[/logic capsule.quarantine]
+
+[logic cap.token.create]
+  > memory.set: trust.tokens = merge(trust.tokens, {
+    [ctx.tokenName]: {
+      scope: ctx.scope,
+      expires: ctx.expires
+    }
+  })
+  > log: "🎟️ Created token: {{ ctx.tokenName }}"
+[/logic cap.token.create]
+
+[logic cap.token.validate]
+  condition: ctx.token not in trust.tokens
+    do:
+      > log: "❌ Invalid token"
+      > exit.context
+  > log: "✅ Valid token"
+[/logic cap.token.validate]
+
+[logic cap.revoke]
+  > memory.delete: trust.tokens[ctx.tokenName]
+  > log: "🔒 Revoked token: {{ ctx.tokenName }}"
+[/logic cap.revoke]
+
+[logic require.entitlement]
+  condition: not ctx.entitlement in memory.user.entitlements
+    do:
+      > log: "🚫 Missing entitlement: {{ ctx.entitlement }}"
+      > exit.context
+[/logic require.entitlement]
+
+[logic permissions.require]
+  [condition granted]
+    check: ctx.required in ctx.user.rights
+    then: > emit: permissions.granted
+  [/condition granted]
+
+  [condition denied]
+    check: ctx.required not in ctx.user.rights
+    then: > emit: permissions.denied
+  [/condition denied]
+[/logic permissions.require]
+
+[logic ghost.listen]
+  > draw.label: "👻 Listening for ghost signals"
+  > memory.set: ghost.trace = trace.unrouted()
+[/logic ghost.listen]
+
+[logic ghost.replay]
+  > emit: {{ ghost.trace | random }}
+  > draw.label: "🔁 Replaying ghost signal"
+[/logic ghost.replay]
+
+[logic glyph.listen]
+  > memory.list.add: glyph.whispers = ctx.symbol
+  > log: "🫧 Whispered glyph: {{ ctx.symbol }}"
+[/logic glyph.listen]
+
+[logic glyph.propagate]
+  > memory.set: glyph.signature.map[ctx.signal] = generate.glyph(ctx.signal)
+  > draw.label: "🪞 Glyph signature: {{ glyph.signature.map[ctx.signal] }}"
+[/logic glyph.propagate]
+
+[logic quantum.echo]
+  > memory.set: quantum.echo.trail += ctx.signal
+  > log: "🔮 Echo pattern registered for: {{ ctx.signal }}"
+[/logic quantum.echo]
+
+[logic quantum.mesh.link]
+  > memory.set: quantum.branch.mesh[ctx.signal] = ctx.linkedSignals
+  > log: "🔗 Quantum mesh linked: {{ ctx.signal }} ↔ {{ ctx.linkedSignals }}"
+[/logic quantum.mesh.link]
+
+[logic quantum.branch.emit]
+  > memory.list.add kernel.branches = ctx.branch
+  > emit: quantum.branch.resolve branch = ctx.branch
+[/logic quantum.branch.emit]
+
+[logic quantum.branch.resolved]
+  > log: "🧬 Branch {{ ctx.branch }} resolved"
+  > memory.set: kernel.lastBranch = ctx.branch
+  > emit: ctx.branch.signal
+[/logic quantum.branch.resolved]
+
+[ui symbolic.kernel]
+  > draw.label: "🧠 Unified Symbolic Kernel"
+  > draw.counter: label = "Signal Queue" source = length(signal.queue)
+  > draw.counter: label = "Signal History" source = length(signal.history)
+  > draw.list: source = execution.flow
+  > draw.chart: source = capsule.usage.stats
+  > draw.chart: source = glyph.signature.map
+  > draw.timeline: source = dream.journal
+  > draw.graph: title = "Glyph Reflections" data = cognition.glyphMap
+  > draw.log: source = memory.memory.echo.log
+[/ui symbolic.kernel]
+
+[/capsule core.execution.symbolic.kernel]
+[trigger hardware.driver.emit /]
+
+[logic hardware.driver.emit]
+  > log: "🚧 Trigger stub for hardware.driver.emit"
+[/logic hardware.driver.emit]
+
+[trigger ctx.branch.signal /]
+
+[logic ctx.branch.signal]
+  > log: "🚧 Trigger stub for ctx.branch.signal"
+[/logic ctx.branch.signal]
+
+[trigger signal.active /]
+
+[logic signal.active]
+  > log: "🚧 Trigger stub for signal.active"
+[/logic signal.active]
+
+[trigger ui.render.label /]
+
+[logic ui.render.label]
+  > log: "🚧 Trigger stub for ui.render.label"
+[/logic ui.render.label]
+
+[trigger io.network.transmit /]
+
+[logic io.network.transmit]
+  > log: "🚧 Trigger stub for io.network.transmit"
+[/logic io.network.transmit]
+
+[trigger securityKernel.firewall.check /]
+
+[logic securityKernel.firewall.check]
+  > log: "🚧 Trigger stub for securityKernel.firewall.check"
+[/logic securityKernel.firewall.check]
+
+[logic emit.cap.token.validate]
+  > emit: cap.token.validate
+  > log: "🚧 Emit stub for cap.token.validate"
+[/logic emit.cap.token.validate]
+
+[logic emit.evolve.cycle.trigger]
+  > emit: evolve.cycle.trigger
+  > log: "🚧 Emit stub for evolve.cycle.trigger"
+[/logic emit.evolve.cycle.trigger]
+
+[logic emit.quantum.echo]
+  > emit: quantum.echo
+  > log: "🚧 Emit stub for quantum.echo"
+[/logic emit.quantum.echo]
+
+[logic emit.evolve.injectFitnessFn]
+  > emit: evolve.injectFitnessFn
+  > log: "🚧 Emit stub for evolve.injectFitnessFn"
+[/logic emit.evolve.injectFitnessFn]
+
+[logic emit.capsule.sandbox]
+  > emit: capsule.sandbox
+  > log: "🚧 Emit stub for capsule.sandbox"
+[/logic emit.capsule.sandbox]
+
+[logic emit.signal.allow]
+  > emit: signal.allow
+  > log: "🚧 Emit stub for signal.allow"
+[/logic emit.signal.allow]
+
+[logic emit.kernel.reflect.init]
+  > emit: kernel.reflect.init
+  > log: "🚧 Emit stub for kernel.reflect.init"
+[/logic emit.kernel.reflect.init]
+
+[logic emit.entropy.regulate]
+  > emit: entropy.regulate
+  > log: "🚧 Emit stub for entropy.regulate"
+[/logic emit.entropy.regulate]
+
+[logic emit.ghost.replay]
+  > emit: ghost.replay
+  > log: "🚧 Emit stub for ghost.replay"
+[/logic emit.ghost.replay]
+
+[logic emit.cap.revoke]
+  > emit: cap.revoke
+  > log: "🚧 Emit stub for cap.revoke"
+[/logic emit.cap.revoke]
+
+[logic emit.boot.ready]
+  > emit: boot.ready
+  > log: "🚧 Emit stub for boot.ready"
+[/logic emit.boot.ready]
+
+[logic emit.substrate.resolve]
+  > emit: substrate.resolve
+  > log: "🚧 Emit stub for substrate.resolve"
+[/logic emit.substrate.resolve]
+
+[logic emit.require.entitlement]
+  > emit: require.entitlement
+  > log: "🚧 Emit stub for require.entitlement"
+[/logic emit.require.entitlement]
+
+[logic emit.capsule.quarantine]
+  > emit: capsule.quarantine
+  > log: "🚧 Emit stub for capsule.quarantine"
+[/logic emit.capsule.quarantine]
+
+[logic emit.quantum.branch.resolved]
+  > emit: quantum.branch.resolved
+  > log: "🚧 Emit stub for quantum.branch.resolved"
+[/logic emit.quantum.branch.resolved]
+
+[logic emit.cap.token.create]
+  > emit: cap.token.create
+  > log: "🚧 Emit stub for cap.token.create"
+[/logic emit.cap.token.create]
+
+[logic emit.pulse.tick]
+  > emit: pulse.tick
+  > log: "🚧 Emit stub for pulse.tick"
+[/logic emit.pulse.tick]
+
+[logic emit.permissions.require]
+  > emit: permissions.require
+  > log: "🚧 Emit stub for permissions.require"
+[/logic emit.permissions.require]
+
+[logic emit.entropy.measure]
+  > emit: entropy.measure
+  > log: "🚧 Emit stub for entropy.measure"
+[/logic emit.entropy.measure]
+
+[logic emit.signal.render]
+  > emit: signal.render
+  > log: "🚧 Emit stub for signal.render"
+[/logic emit.signal.render]
+
+[logic emit.security.evolution]
+  > emit: security.evolution
+  > log: "🚧 Emit stub for security.evolution"
+[/logic emit.security.evolution]
+
+[logic emit.system.boot]
+  > emit: system.boot
+  > log: "🚧 Emit stub for system.boot"
+[/logic emit.system.boot]
+
+[logic emit.signal.incoming]
+  > emit: signal.incoming
+  > log: "🚧 Emit stub for signal.incoming"
+[/logic emit.signal.incoming]
+
+[logic emit.signal.block]
+  > emit: signal.block
+  > log: "🚧 Emit stub for signal.block"
+[/logic emit.signal.block]
+
+[logic emit.quantum.mesh.link]
+  > emit: quantum.mesh.link
+  > log: "🚧 Emit stub for quantum.mesh.link"
+[/logic emit.quantum.mesh.link]
+
+[logic emit.glyph.listen]
+  > emit: glyph.listen
+  > log: "🚧 Emit stub for glyph.listen"
+[/logic emit.glyph.listen]

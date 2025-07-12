@@ -1,0 +1,229 @@
+[capsule core9.quantumBranch]
+
+[meta quantumBranch.meta]
+  set: type = layer
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Symbolic quantum branching, entanglement, fork logic, and state collapse"
+[/meta quantumBranch.meta]
+
+[trigger boot.quantumBranch /]
+[trigger quantum.init /]
+[trigger quantum.loop /]
+[trigger quantum.observe /]
+[trigger quantum.branch.check /]
+[trigger quantum.collapse /]
+[trigger quantum.collapse.resolve /]
+[trigger quantum.entanglement.evaluate /]
+[trigger quantum.observe.memory /]
+[trigger debug.quantum.snapshot /]
+[trigger quantumBranch.init /]
+[trigger quantumBranch.tick /]
+[trigger quantumBranch.resolve /]
+[trigger quantum.branch.resolve /]
+[trigger quantum.branch.finalize /]
+[trigger quantum.branch.emit /]
+[trigger quantum.branch.resolved /]
+[trigger quantum.branch.debug /]
+
+[memory quantum.branch.id /]
+[memory quantum.entangled /]
+[memory quantum.probability /]
+[memory quantum.state /]
+[memory quantum.collapsed /]
+[memory quantum.last.overlay /]
+[memory quantum.branch.active /]
+[memory quantum.branch.stack /]
+[memory quantum.branch.history /]
+[memory quantum.fork.id /]
+[memory quantum.branch.tickRate /]
+
+[logic boot.quantumBranch]
+  > log: "🧼 [core9] Initializing Quantum Branch Layer..."
+  > emit: quantum.init
+  > emit: quantum.loop
+  > emit: quantumBranch.init
+  > emit: emit.signal  # Patch to resolve orphan trigger
+[/logic boot.quantumBranch]
+
+[logic quantum.init]
+  > memory.scope: quantum
+  > memory.set: quantum.branch.id = generate.uuid()
+  > memory.set: quantum.entangled = []
+  > memory.set: quantum.probability = {}
+  > memory.set: quantum.state = "superposition"
+  > memory.set: quantum.collapsed = false
+  > emit: quantum.ready
+[/logic quantum.init]
+
+[logic quantum.loop]
+  > log: "♾️ [quantum] Spinning quantum evaluation loop..."
+  > emit: quantum.observe
+  > wait: 300ms
+  > emit: quantum.loop
+[/logic quantum.loop]
+
+[logic quantum.observe]
+  > log: "👁️ [quantum] Observing symbolic state..."
+  > emit: quantum.branch.check
+  > emit: quantum.entanglement.evaluate
+[/logic quantum.observe]
+
+[logic quantum.branch.check]
+  [condition ready.to.collapse]
+    check: quantum.collapsed == false and quantum.state == "superposition" and quantumBranch.entropy() > 0.85
+    then:
+      > log: "🔀 [quantum] Probabilistic collapse triggered"
+      > emit: quantum.collapse
+  [/condition ready.to.collapse]
+[/logic quantum.branch.check]
+
+[logic quantum.collapse]
+  > log: "💥 [quantum] Collapsing quantum branches..."
+  > memory.set: quantum.collapsed = true
+  > memory.set: quantum.state = "collapsed"
+  > emit: quantum.collapse.resolve
+[/logic quantum.collapse]
+
+[logic quantum.collapse.resolve]
+  > log: "🌌 [quantum] Resolving final branch outcome..."
+  [condition fork.intent]
+    check: memory.intent matches "fork.*"
+    then: > emit: {{memory.intent}}
+  [/condition fork.intent]
+
+  [condition dream.mode]
+    check: mind.state == "dreaming"
+    then: > emit: mind.dream
+  [/condition dream.mode]
+
+  [condition fractal.mood]
+    check: mood.state == "fractal"
+    then: > draw.scene: "fractalCollapse"
+  [/condition fractal.mood]
+[/logic quantum.collapse.resolve]
+
+[logic quantum.entanglement.evaluate]
+  > log: "🔗 [quantum] Evaluating entangled elements..."
+  > loop: quantum.entangled as partner
+    do:
+      > log: "🔗 Entangled with: {{partner}}"
+      > emit: echo.sync.quantum
+[/logic quantum.entanglement.evaluate]
+
+[logic quantum.observe.memory]
+  > log: "📊 [quantum] Importing remote entangled state..."
+  > memory.list.add: quantum.entangled = {{signal.from}}
+  > memory.set: quantum.last.overlay = {{signal.memory.overlay}}
+[/logic quantum.observe.memory]
+
+[logic quantumBranch.entropy]
+  > return: random.float()
+[/logic quantumBranch.entropy]
+
+[logic debug.quantum.snapshot]
+  > log: "🧪 Quantum Branch Debug State:"
+  > log: "branch.id: {{quantum.branch.id}}"
+  > log: "state: {{quantum.state}}"
+  > log: "collapsed: {{quantum.collapsed}}"
+  > log: "entangled: {{quantum.entangled}}"
+[/logic debug.quantum.snapshot]
+
+[logic quantumBranch.init]
+  > memory.set: quantum.branch.active = []
+  > memory.set: quantum.branch.stack = []
+  > memory.set: quantum.branch.history = []
+  > memory.set: quantum.fork.id = 0
+  > memory.set: quantum.branch.tickRate = 2s
+  > emit: quantumBranch.tick
+[/logic quantumBranch.init]
+
+[logic quantumBranch.loop]
+  > emit: quantumBranch.resolve
+  > delay: quantum.branch.tickRate
+  > emit: quantumBranch.tick
+[/logic quantumBranch.loop]
+
+[logic quantumBranch.resolve]
+  > log: "🌀 [quantum] Resolving active branches..."
+  > emit: quantum.branch.resolve
+  > emit: quantum.branch.finalize
+[/logic quantumBranch.resolve]
+
+[logic quantum.branch.resolve]
+  [condition branch.stack.nonempty]
+    check: quantum.branch.stack not empty
+    then:
+      > memory.shift: quantum.branch.stack → quantum.branch.active
+      > log: "🔀 [quantum] Processing branch: {{ quantum.branch.active }}"
+      > emit: signal: {{ quantum.branch.active }}
+  [/condition branch.stack.nonempty]
+[/logic quantum.branch.resolve]
+
+[logic quantum.branch.finalize]
+  > memory.append: quantum.branch.history = quantum.branch.active
+  > memory.set: quantum.branch.active = null
+[/logic quantum.branch.finalize]
+
+[logic quantum.branch.fork]
+  > memory.increment: quantum.fork.id
+  > memory.set: quantum.branch.id = "branch::" + quantum.fork.id
+  > memory.append: quantum.branch.stack = ctx.signal
+  > log: "🌱 [quantum] Forked new branch: {{ quantum.branch.id }}"
+[/logic quantum.branch.fork]
+
+[logic quantum.branch.report]
+  > log: "✅ [quantum] Branch resolved: {{ ctx.signal }}"
+  > memory.append: quantum.branch.history = ctx.signal
+[/logic quantum.branch.report]
+
+[logic quantum.branch.debug]
+  > draw.label: "🔎 Active Branch: {{ quantum.branch.active }}"
+  > draw.list: source = quantum.branch.stack
+  > draw.log: source = quantum.branch.history
+[/logic quantum.branch.debug]
+
+[/capsule core9.quantumBranch]
+[trigger mind.dream /]
+
+[logic mind.dream]
+  > log: "🚧 Trigger stub for mind.dream"
+[/logic mind.dream]
+
+[trigger signal /]
+
+[logic signal]
+  > log: "🚧 Trigger stub for signal"
+[/logic signal]
+
+[trigger echo.sync.quantum /]
+
+[logic echo.sync.quantum]
+  > log: "🚧 Trigger stub for echo.sync.quantum"
+[/logic echo.sync.quantum]
+
+[trigger quantum.ready /]
+
+[logic quantum.ready]
+  > log: "🚧 Trigger stub for quantum.ready"
+[/logic quantum.ready]
+
+[logic emit.quantum.branch.emit]
+  > emit: quantum.branch.emit
+  > log: "🚧 Emit stub for quantum.branch.emit"
+[/logic emit.quantum.branch.emit]
+
+[logic emit.debug.quantum.snapshot]
+  > emit: debug.quantum.snapshot
+  > log: "🚧 Emit stub for debug.quantum.snapshot"
+[/logic emit.debug.quantum.snapshot]
+
+[logic emit.boot.quantumBranch]
+  > emit: boot.quantumBranch
+  > log: "🚧 Emit stub for boot.quantumBranch"
+[/logic emit.boot.quantumBranch]
+
+[logic emit.quantum.branch.debug]
+  > emit: quantum.branch.debug
+  > log: "🚧 Emit stub for quantum.branch.debug"
+[/logic emit.quantum.branch.debug]

@@ -1,0 +1,307 @@
+[capsule core20.symbolicEntity]
+
+[capsule entity.spawn]
+
+[trigger entity.spawn /]
+
+[logic entity.spawn]
+  > memory.set: entity.{{ ctx.name }}.active = true
+  > memory.set: entity.{{ ctx.name }}.mood = ctx.mood or "neutral"
+  > memory.set: entity.{{ ctx.name }}.memory = {}
+  > draw.label: "{{ ctx.name }} has entered."
+[/logic entity.spawn]
+
+[/capsule entity.spawn]
+
+[capsule entity.speak]
+
+[trigger entity.speak /]
+
+[logic entity.speak]
+  > draw.label: "{{ ctx.name }} says: {{ ctx.text }}"
+  > memory.set: entity.{{ ctx.name }}.lastSpeech = ctx.text
+[/logic entity.speak]
+
+[/capsule entity.speak]
+
+[capsule entity.emote]
+
+[trigger entity.emote /]
+
+[logic entity.emote]
+  > mood.set: ctx.mood
+  > draw.label: "{{ ctx.name }} feels {{ ctx.mood }}"
+[/logic entity.emote]
+
+[/capsule entity.emote]
+
+[capsule entity.remember]
+
+[trigger entity.remember /]
+
+[logic entity.remember]
+  > memory.set: entity.{{ ctx.name }}.memory.{{ ctx.key }} = ctx.value
+[/logic entity.remember]
+
+[/capsule entity.remember]
+
+[capsule entity.recall]
+
+[trigger entity.recall /]
+
+[logic entity.recall]
+  > draw.label: "{{ ctx.name }} remembers: {{ entity[ctx.name].memory[ctx.key] }}"
+[/logic entity.recall]
+
+[/capsule entity.recall]
+
+[capsule entity.reflect]
+
+[trigger entity. /]
+
+[logic entity.reflect]
+  > log: "🧬 Entity signal triggered: {{ ctx }}"
+  > memory.set: entity.context = ctx
+[/logic entity.reflect]
+
+[/capsule entity.reflect]
+
+[capsule entity.act]
+
+[trigger entity.act /]
+
+[logic entity.act]
+  > draw.label: "{{ ctx.name }} performs: {{ ctx.action }}"
+  > emit: ctx.action
+[/logic entity.act]
+
+[/capsule entity.act]
+
+[capsule entity.routeSignal]
+
+[trigger entity.route /]
+
+[logic entity.routeSignal]
+  > emit: entity.{{ ctx.name }}.{{ ctx.action }}
+[/logic entity.routeSignal]
+
+[/capsule entity.routeSignal]
+
+[capsule entity.exit]
+
+[trigger entity.exit /]
+
+[logic entity.exit]
+  > draw.label: "{{ ctx.name }} has left."
+  > memory.set: entity.{{ ctx.name }}.active = false
+[/logic entity.exit]
+
+[/capsule entity.exit]
+
+[capsule interaction.matrix.init]
+
+[trigger interaction.matrix.start /]
+
+[logic interaction.matrix.init]
+  > memory.set: interaction.index = []
+  > draw.label: "🧭 Initializing Interaction Matrix..."
+  > emit: interaction.matrix.scan
+[/logic interaction.matrix.init]
+
+[/capsule interaction.matrix.init]
+
+[capsule interaction.matrix.scan]
+
+[trigger interaction.matrix.scan /]
+
+[logic interaction.matrix.scan]
+  > memory.set: interaction.targets = memory.list.keys(prefix = "interaction.target.")
+  > foreach: interaction.targets
+    do: > memory.append: interaction.index = item
+  > emit: interaction.matrix.ready
+[/logic interaction.matrix.scan]
+
+[/capsule interaction.matrix.scan]
+
+[capsule interaction.matrix.ready]
+
+[trigger interaction.matrix.ready /]
+
+[logic interaction.matrix.ready]
+  > log: "[🧬] Interaction Matrix populated: {{ interaction.index }}"
+  > draw.label: "Matrix ready. {{ interaction.index | length }} active nodes"
+[/logic interaction.matrix.ready]
+
+[/capsule interaction.matrix.ready]
+
+[capsule interaction.matrix.route]
+
+[trigger interaction.route /]
+
+[logic interaction.matrix.route]
+  > log: "[🔀] Routing interaction signal: {{ ctx.route }}"
+  > emit: interaction.target.{{ ctx.route }}
+[/logic interaction.matrix.route]
+
+[/capsule interaction.matrix.route]
+
+[capsule genome.encode]
+
+[trigger genome.encode /]
+
+[logic genome.encode]
+  > memory.set: genome.{{ ctx.gene }} = ctx.value
+  > log: "[🧬] Encoded gene '{{ ctx.gene }}' = '{{ ctx.value }}'"
+[/logic genome.encode]
+
+[/capsule genome.encode]
+
+[capsule genome.express]
+
+[trigger genome.express /]
+
+[logic genome.express]
+  > emit: signal.{{ genome[ctx.gene] }}
+  > log: "[🧬] Expressed gene '{{ ctx.gene }}' -> {{ genome[ctx.gene] }}"
+[/logic genome.express]
+
+[/capsule genome.express]
+
+[capsule dna.transcribe]
+
+[trigger dna.transcribe /]
+
+[logic dna.transcribe]
+  > memory.set: dna.structure = ctx.sequence
+  > draw.label: "🧬 Transcribed symbolic DNA"
+  > emit: dna.activate
+[/logic dna.transcribe]
+
+[/capsule dna.transcribe]
+
+[capsule dna.activate]
+
+[trigger dna.activate /]
+
+[logic dna.activate]
+  > log: "[🧬] Activated symbolic DNA: {{ dna.structure }}"
+  [condition structure.exists]
+    check: dna.structure exists
+    then: > emit: signal.{{ dna.structure }}
+  [/condition structure.exists]
+[/logic dna.activate]
+
+[/capsule dna.activate]
+
+[capsule mindgarden.plant.idea]
+
+[trigger mind.plant /]
+
+[logic mindgarden.plant.idea]
+  > memory.list.add: ctx.idea to: mind.seeds
+  > log: "[🌱] Idea planted: {{ ctx.idea }}"
+  > emit: mindgarden.nurture
+[/logic mindgarden.plant.idea]
+
+[/capsule mindgarden.plant.idea]
+
+[capsule mindgarden.nurture]
+
+[trigger mindgarden.nurture /]
+
+[logic mindgarden.nurture]
+  > foreach: mind.seeds
+    do: > log: "[🌿] Nurturing: {{ item }}"
+  > draw.label: "🧠 MindGarden growing {{ len(mind.seeds) }} ideas"
+[/logic mindgarden.nurture]
+
+[/capsule mindgarden.nurture]
+
+[/capsule core20.symbolicEntity]
+[trigger interaction.target. /]
+
+[logic interaction.target.]
+  > log: "🚧 Trigger stub for interaction.target."
+[/logic interaction.target.]
+
+[trigger ctx.action /]
+
+[logic ctx.action]
+  > log: "🚧 Trigger stub for ctx.action"
+[/logic ctx.action]
+
+[trigger signal. /]
+
+[logic signal.]
+  > log: "🚧 Trigger stub for signal."
+[/logic signal.]
+
+[logic emit.interaction.route]
+  > emit: interaction.route
+  > log: "🚧 Emit stub for interaction.route"
+[/logic emit.interaction.route]
+
+[logic emit.entity.speak]
+  > emit: entity.speak
+  > log: "🚧 Emit stub for entity.speak"
+[/logic emit.entity.speak]
+
+[logic emit.entity.exit]
+  > emit: entity.exit
+  > log: "🚧 Emit stub for entity.exit"
+[/logic emit.entity.exit]
+
+[logic emit.entity.emote]
+  > emit: entity.emote
+  > log: "🚧 Emit stub for entity.emote"
+[/logic emit.entity.emote]
+
+[logic emit.interaction.matrix.start]
+  > emit: interaction.matrix.start
+  > log: "🚧 Emit stub for interaction.matrix.start"
+[/logic emit.interaction.matrix.start]
+
+[logic emit.entity.recall]
+  > emit: entity.recall
+  > log: "🚧 Emit stub for entity.recall"
+[/logic emit.entity.recall]
+
+[logic emit.entity.remember]
+  > emit: entity.remember
+  > log: "🚧 Emit stub for entity.remember"
+[/logic emit.entity.remember]
+
+[logic emit.genome.express]
+  > emit: genome.express
+  > log: "🚧 Emit stub for genome.express"
+[/logic emit.genome.express]
+
+[logic emit.entity.act]
+  > emit: entity.act
+  > log: "🚧 Emit stub for entity.act"
+[/logic emit.entity.act]
+
+[logic emit.genome.encode]
+  > emit: genome.encode
+  > log: "🚧 Emit stub for genome.encode"
+[/logic emit.genome.encode]
+
+[logic emit.mind.plant]
+  > emit: mind.plant
+  > log: "🚧 Emit stub for mind.plant"
+[/logic emit.mind.plant]
+
+[logic emit.dna.transcribe]
+  > emit: dna.transcribe
+  > log: "🚧 Emit stub for dna.transcribe"
+[/logic emit.dna.transcribe]
+
+[logic emit.entity.spawn]
+  > emit: entity.spawn
+  > log: "🚧 Emit stub for entity.spawn"
+[/logic emit.entity.spawn]
+
+[logic emit.entity.route]
+  > emit: entity.route
+  > log: "🚧 Emit stub for entity.route"
+[/logic emit.entity.route]

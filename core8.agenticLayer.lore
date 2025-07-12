@@ -1,0 +1,185 @@
+[capsule core8.agenticLayer]
+
+[meta agentic.meta]
+  set: type = layer
+  set: version = 1.0
+  set: author = system.lumeria
+  set: purpose = "Unified symbolic agentic layer for autonomous signal processing, routing, and cognitive execution loop"
+[/meta agentic.meta]
+
+[trigger boot.agenticLayer /]
+[trigger agent.init /]
+[trigger agent.loop /]
+[trigger agent.signal.process /]
+[trigger agent.intent.set /]
+[trigger agent.context.push /]
+[trigger agent.context.pop /]
+[trigger agent.queue /]
+[trigger agent.ready /]
+[trigger agent.evaluate /]
+[trigger agent.intent.route /]
+[trigger agent.observe /]
+[trigger agent.assist /]
+[trigger agent.route.signal /]
+
+[memory agent.id /]
+[memory agent.state /]
+[memory agent.intent /]
+[memory agent.snapshot /]
+[memory agent.context.stack /]
+[memory agent.routing.enabled /]
+[memory agent.signal.queue /]
+[memory next.signal /]
+
+[when boot.agenticLayer]
+  > log: "🧠 [core8] Booting Agentic Layer..."
+  > emit: agent.init
+  > emit: agent.loop
+[/when boot.agenticLayer]
+
+[when agent.init]
+  > memory.scope: agent
+  > memory.set: agent.id = generate.uuid()
+  > memory.set: agent.state = "idle"
+  > memory.set: agent.intent = null
+  > memory.set: agent.context.stack = []
+  > memory.set: agent.routing.enabled = true
+  > memory.set: agent.signal.queue = []
+  > emit: agent.ready
+[/when agent.init]
+
+[when agent.ready]
+  > log: "✅ Agent initialized and ready"
+  > emit: agent.loop
+[/when agent.ready]
+
+[when agent.loop]
+  > emit: agent.signal.process
+[/when agent.loop]
+
+[when agent.signal.process]
+  > log: "🔁 Processing agentic signal"
+  > eval: ctx.activeAgent
+
+  [condition intent.present]
+    check: ctx.intent != null
+    then: > emit: agent.intent.set intent = {{ctx.intent}}
+  [/condition intent.present]
+
+  [condition stack.push]
+    check: ctx.stack == "push"
+    then: > emit: agent.context.push context = {{ctx.context}}
+  [/condition stack.push]
+
+  [condition stack.pop]
+    check: ctx.stack == "pop"
+    then: > emit: agent.context.pop
+  [/condition stack.pop]
+
+  [condition queue.present]
+    check: ctx.queue != null
+    then: > emit: agent.queue signal = {{ctx.queue}}
+  [/condition queue.present]
+[/when agent.signal.process]
+
+[when agent.intent.set]
+  > memory.set: agent.intent = ctx.intent
+  > log: "🎯 Intent set: {{ ctx.intent }}"
+  > emit: agent.loop
+[/when agent.intent.set]
+
+[when agent.context.push]
+  > memory.push: agent.context.stack = ctx.context
+  > log: "📥 Context pushed: {{ ctx.context }}"
+[/when agent.context.push]
+
+[when agent.context.pop]
+  > memory.pop: agent.context.stack
+  > log: "📤 Context popped"
+[/when agent.context.pop]
+
+[when agent.queue]
+  > memory.append: agent.signal.queue = ctx.queue
+  > log: "🗳 Queued signal: {{ ctx.queue }}"
+[/when agent.queue]
+
+[when agent.evaluate]
+  > log: "🎯 [agent] Evaluating intent and routing context..."
+  [condition agent.intent.present]
+    check: agent.intent exists
+    then: > emit: agent.intent.route
+  [/condition agent.intent.present]
+
+  [condition agent.signal.queue.notempty]
+    check: agent.signal.queue | len > 0
+    then:
+      > memory.set: next.signal = memory.shift(agent.signal.queue)
+      > emit: agent.signal.process
+  [/condition agent.signal.queue.notempty]
+
+  > wait: 500ms
+  > emit: agent.loop
+[/when agent.evaluate]
+
+[when agent.intent.route]
+  [condition observe]
+    check: agent.intent matches "observe.*"
+    then: > emit: agent.observe
+  [/condition observe]
+
+  [condition assist]
+    check: agent.intent matches "assist.*"
+    then: > emit: agent.assist
+  [/condition assist]
+
+  [condition route]
+    check: agent.intent matches "route.*"
+    then: > emit: agent.route.signal
+  [/condition route]
+
+  [condition unknown]
+    check: true
+    then: > log: "⚠️ [agent] Unknown intent: {{agent.intent}}"
+  [/condition unknown]
+[/when agent.intent.route]
+
+[when agent.observe]
+  > log: "🔍 [agent] Observing symbolic environment..."
+  > memory.set: agent.snapshot = memory.export(keys = ["signal.*", "context.*"])
+  > memory.set: agent.intent = null
+[/when agent.observe]
+
+[when agent.assist]
+  > log: "🛠️ [agent] Performing assistive support actions..."
+  > emit: mood.reflect
+  > emit: mind.reflect
+  > memory.set: agent.intent = null
+[/when agent.assist]
+
+[when agent.route.signal]
+  > log: "📬 [agent] Routing queued signal through context switcher"
+  [condition valid.next]
+    check: next.signal exists
+    then:
+      > emit: {{next.signal}}
+      > memory.set: agent.intent = null
+  [/condition valid.next]
+[/when agent.route.signal]
+
+[ui agentic.layer]
+  > draw.label: "🧠 Agentic Layer"
+  > draw.value: label = "Intent" source = memory.agent.intent
+  > draw.list: label = "Context Stack" source = memory.agent.context.stack
+  > draw.list: label = "Signal Queue" source = memory.agent.signal.queue
+[/ui agentic.layer]
+
+[/capsule core8.agenticLayer]
+[logic emit.boot.agenticLayer]
+  > emit: boot.agenticLayer
+  > log: "🚧 Emit stub for boot.agenticLayer"
+[/logic emit.boot.agenticLayer]
+
+[logic emit.agent.evaluate]
+  > emit: agent.evaluate
+  > log: "🚧 Emit stub for agent.evaluate"
+[/logic emit.agent.evaluate]

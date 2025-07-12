@@ -1,0 +1,1784 @@
+[capsule grammar.engine]
+
+[trigger grammar.engine.start /]
+
+[logic grammar.engine.start]
+  > emit: validate.grammar
+
+[capsule grammarSpec]
+
+[trigger validate.grammar /]
+
+[logic validate.grammar]
+  > emit: grammar.check.all
+
+[meta grammarSpec]
+  set: type = grammar
+  set: version = 0.4
+  set: author = system.lumeria
+  set: purpose = "Define symbolic grammar rules and block structures for Lumeria V0.4"
+[/meta grammarSpec]
+
+########################################################################################
+                            ## SIGNAL STRUCTURE BLOCK: ##
+########################################################################################
+
+# A valid signal must follow symbolic form and not contain nested structures or data blobs:
+[capsule grammar.signal.structure]
+
+[meta signalStructure]
+  set: type = grammar.validator
+  set: version = 1.0
+  set: author = system.lumeria
+  set: purpose = "Validate signal structure conforms to symbolic rules"
+[/meta signalStructure]
+
+[trigger signal: validate.signal.structure /]
+
+[logic validateSignalStructure]
+
+  > log: "🔎 Validating signal structure..."
+  
+  [condition signal.name is symbolic]
+    [condition signal.payload is flat or key-value]
+      > log: "✅ Signal structure valid"
+    [/condition]
+    [condition signal.payload is deeply.nested]
+      > emit: reject.signal
+        ctx.reason = "Nested structures are disallowed in V0.4"
+    [/condition]
+    [condition signal.payload contains "{ ... }"]
+      > memory.append: grammar.validation.errors = "Inline blocks not allowed in signal"
+    [/condition]
+  [/condition]
+
+  [condition not signal.name is symbolic]
+    > emit: reject.signal
+      ctx.reason = "Signal name must be symbolic"
+  [/condition]
+
+[/logic validateSignalStructure]
+
+[/capsule grammar.signal.structure]
+
+########################################################################################
+                            ## SYMBOLIC CONSTANTS BLOCK: ##
+########################################################################################
+
+[grammar symbolic.constants]
+
+########################################################################################
+                    ## Core STRUCTURAL FIELDS observed in capsules: ##
+########################################################################################
+[capsule grammar.mnemonic.referenceFields]
+
+[meta grammarSpec]
+  set: type = mnemonic.map
+  set: version = 1.0
+  set: author = system.lumeria
+  set: purpose = "Executable mnemonic mappings for reference grammar fields"
+[/meta grammarSpec]
+
+[trigger grammar.boot /]
+
+[logic mnemonic.referenceFields]
+  > mnemonic.map: name       = F01
+  > mnemonic.map: tag        = F02
+  > mnemonic.map: value      = F03
+  > mnemonic.map: type       = F04
+  > mnemonic.map: version    = F05
+  > mnemonic.map: signal     = F06
+  > mnemonic.map: props      = F07
+  > mnemonic.map: do         = F08
+  > mnemonic.map: if         = F09
+  > mnemonic.map: else       = F0A
+  > mnemonic.map: condition  = F0B
+  > mnemonic.map: set        = F0C
+  > mnemonic.map: emit       = F0D
+  > mnemonic.map: draw       = F0E
+  > mnemonic.map: memory     = F0F
+  > mnemonic.map: ctx        = F10
+[/logic mnemonic.referenceFields]
+
+[/capsule grammar.mnemonic.referenceFields]
+
+########################################################################################
+                    ## Core SYMBOLIC VERBS observed in capsules: ##
+########################################################################################
+ 
+[grammar reference.verbs]
+  
+# 🧠 Cognitive & Reflective:
+
+[capsule grammar.mnemonic.referenceVerbs]
+
+[meta grammarSpec]
+  set: type = mnemonic.map
+  set: version = 1.0
+  set: category = "cognitive.verbs"
+  set: author = system.lumeria
+  set: purpose = "Mnemonic map for core cognitive & reflective symbolic verbs"
+[/meta grammarSpec]
+
+[trigger grammar.boot /]
+
+  > mnemonic.map: mood.set                = V01   # Set current mood state
+  > mnemonic.map: echo.capture            = V02   # Store user expression or state trace
+  > mnemonic.map: identity.set            = V03   # Define symbolic identity
+  > mnemonic.map: identity.reflect        = V04   # Compare actions to declared symbolic identity
+  > mnemonic.map: intent.detect           = V05   # Infer user intention from signal
+  > mnemonic.map: intent.shift            = V06   # Change system goal symbolically based on trigger
+  > mnemonic.map: echo.recall             = V07   # Retrieve symbolic memory echo
+  > mnemonic.map: echo.analyze            = V08   # Analyze signal drift between input and response
+  > mnemonic.map: grammar.suggest         = V09   # Suggest grammar completions or corrections
+  > mnemonic.map: suggest.closestMatch    = V0A   # Suggest the nearest valid tag or field (fuzzy match)
+  > mnemonic.map: reason.inferCause       = V0B   # Shows previous signal leading to current one
+  > mnemonic.map: reason.why              = V0C   # Explains origin of a memory key or logic trigger
+  > mnemonic.map: reason.breadcrumbs      = V0D   # Prints the full trace of executed signals
+  > mnemonic.map: reason.explainCondition = V0E   # Breaks down symbolic conditions and their truth state
+  > mnemonic.map: reason.suggestNext      = V0F   # Offers plausible next steps in symbolic logic
+  > mnemonic.map: learn.pattern           = V10   # Store symbolic input/memory/signal traces
+  > mnemonic.map: train.memory            = V11   # Replay memory+signal patterns from learned traces
+  > mnemonic.map: predict.signal          = V12   # Emit most likely signal based on input similarity
+  > mnemonic.map: cluster.capsules        = V13   # Group capsules symbolically via tags or metadata
+  > mnemonic.map: learn.reset             = V14   # Reset learned patterns
+  > mnemonic.map: mood.trace              = V15   # Record emotional/mood trajectory over time
+  > mnemonic.map: mood.reflect            = V16   # Show current mood
+  > mnemonic.map: emotion.set             = V17   # Set mood to specific value
+  > mnemonic.map: emotion.shift           = V18   # Transition mood, saving previous
+  > mnemonic.map: emotion.resonate        = V19   # Trigger based on mood match
+  > mnemonic.map: emotion.cycle           = V1A   # Rotate through defined moods
+  > mnemonic.map: test.capsule.coverage   = V1B   # Show coverage stats on symbolic capsule paths
+  > mnemonic.map: test.agent.simulate     = V1C   # Simulate agent behavior under symbolic conditions
+  > mnemonic.map: test.signal.echo        = V1D   # Echo test signal through stack
+  > mnemonic.map: test.context.shift      = V1E   # Fork loot and compare memory outcomes
+  > mnemonic.map: require.awakening       = V1F   # Gated access based on symbolic readiness
+  > mnemonic.map: require.path            = V20   # Allow only after capsule lineage achieved
+  > mnemonic.map: auth.recursive.verify   = V21   # Authenticate by symbolic history
+  > mnemonic.map: sandbox.identity        = V22   # Run capsule in identity-bound sandbox
+
+
+
+########################################################################################
+                            ## 👤 Symbolic Entities: ##
+######################################################################################## 
+
+  > mnemonic.map: entity.spawn            = V23   # Spawn a symbolic character with mood and memory
+  > mnemonic.map: entity.speak            = V24   # Display dialogue line from an entity
+  > mnemonic.map: entity.emote            = V25   # Express mood from the entity
+  > mnemonic.map: entity.remember         = V26   # Store key-value memory per entity
+  > mnemonic.map: entity.recall           = V27   # Retrieve entity memory
+  > mnemonic.map: entity.act              = V28   # Perform symbolic action
+  > mnemonic.map: entity.route            = V29   # Route signal to entity namespace
+  > mnemonic.map: entity.exit             = V2A   # Deactivate symbolic character
+  > mnemonic.map: entity.memory.set       = V2B   # Set scoped memory value for an entity
+  > mnemonic.map: entity.memory.get       = V2C   # Retrieve memory scoped to symbolic entity
+  > mnemonic.map: entity.memory.clear     = V2D   # Wipe all memory for an entity
+  > mnemonic.map: entity.memory.append    = V2E   # Append to a list-type key for an entity
+  > mnemonic.map: entity.memory.snapshot  = V2F   # View full memory map of an entity
+
+
+########################################################################################
+                      ## 🔁 Flow Control & Execution:: ##
+######################################################################################## 
+
+  > mnemonic.map: condition               = V30   # Conditional execution block
+  > mnemonic.map: loop                    = V31   # Symbolic repetition / recursion
+  > mnemonic.map: loop.start              = V32   # Begin symbolic loop
+  > mnemonic.map: loop.tick               = V33   # Trigger each loop iteration
+  > mnemonic.map: loop.check              = V34   # Evaluate breaking conditions
+  > mnemonic.map: loop.break              = V35   # End the loop
+  > mnemonic.map: loop.continue           = V36   # Continue loop execution
+  > mnemonic.map: loop.phase.register     = V37   # Register symbolic phase logic
+  > mnemonic.map: loop.eval               = V38   # Evaluate specific phase actions
+  > mnemonic.map: eval                    = V39   # Execute symbolic expression
+  > mnemonic.map: emit                    = V3A   # Send symbolic signal
+  > mnemonic.map: emit.signal             = V3B   # Emit specific signal name
+  > mnemonic.map: signal                  = V3C   # Declare signal type or trigger
+  > mnemonic.map: signal.stream           = V3D   # 🌊 Emit a continuous signal stream, such as polling or heartbeat
+  > mnemonic.map: signal.reflect          = V3E   # Display introspection info on current signal
+  > mnemonic.map: signal.trace            = V3F   # Store signal history to memory
+  > mnemonic.map: signal.rewrite          = V40   # Replace current signal with a new one
+  > mnemonic.map: signal.pause            = V41   # Temporarily block a signal
+  > mnemonic.map: signal.resume           = V42   # Resume a paused signal from memory
+
+  > mnemonic.map: input                   = V43   # Capture symbolic input
+  > mnemonic.map: input.listen            = V44   # Register channel and signal for live input stream
+  > mnemonic.map: input.receive           = V45   # Handle raw input values from external or internal sources
+  > mnemonic.map: input.map               = V46   # Map symbolic input source to internal trigger
+  > mnemonic.map: input.queue             = V47   # Add item to symbolic input buffer
+  > mnemonic.map: input.flush             = V48   # Process buffered input
+  > mnemonic.map: input.capture           = V49   # Await and store user input
+  > mnemonic.map: input.route             = V4A   # Generic input signal triggered on any input
+  > mnemonic.map: input.resolve           = V4B   # Resolves context for input routing
+  > mnemonic.map: input.process           = V4C   # Process input (cleaning, normalizing)
+  > mnemonic.map: input.bindContext       = V4D   # Temporarily route input to a named context
+  > mnemonic.map: input.releaseContext    = V4E   # Release context binding
+  > mnemonic.map: input.inject            = V4F   # Inject input from code or remote source
+  > mnemonic.map: input.choice            = V50   # Present input options
+  > mnemonic.map: input.change            = V51   # 🪄 Detect input changes (text, slider, etc) and update memory symbolically
+  > mnemonic.map: input.mic               = V52   # 🎙 Activate microphone input symbolically
+  > mnemonic.map: input.playback          = V53   # ⏯ Playback previously captured media
+  > mnemonic.map: output.map              = V54   # Define mapping between symbolic outputs and real destinations
+  > mnemonic.map: output.send             = V55   # Send symbolic value to a mapped external target
+  > mnemonic.map: output.dispatch         = V56   # Low-level dispatch handler (customizable)
+  > mnemonic.map: output.fallback         = V57   # Fallback handler if no output mapping found
+  > mnemonic.map: fork.loot               = V58   # Start subcontext via .loot
+  > mnemonic.map: exit.context            = V59   # Return from loot or subcontext
+  > mnemonic.map: exit.symbolic           = V5A   # Clean symbolic shutdown of capsule execution
+  > mnemonic.map: return                  = V5B   # Symbolic return from capsule
+  > mnemonic.map: yield                   = V5C   # Temporarily return output
+  > mnemonic.map: await                   = V5D   # Wait for symbolic input or state
+  > mnemonic.map: try                     = V5E   # Begin error-handling block
+  > mnemonic.map: catch                   = V5F   # Handle symbolic error
+  > mnemonic.map: match                   = V60   # Pattern match branch
+  > mnemonic.map: case                    = V61   # Match case entry
+  > mnemonic.map: continue                = V62   # Resume next iteration
+  > mnemonic.map: break                   = V63   # Exit current block
+  > mnemonic.map: defer                   = V64   # Delay execution
+  > mnemonic.map: resume                  = V65   # Resume paused symbolic state
+  > mnemonic.map: goto                    = V66   # Jump to labeled point
+  > mnemonic.map: label                   = V67   # Mark symbolic position
+
+
+########################################################################################
+                          ## 🔗 Capsule Runtime & Composition: ##
+######################################################################################## 
+
+  > mnemonic.map: capsule                = V68   # Declare capsule block
+  > mnemonic.map: capsule.clone          = V69   # Duplicate capsule
+  > mnemonic.map: capsule.inject         = V6A   # Inject content into capsule
+  > mnemonic.map: capsule.eval           = V6B   # Evaluate capsule in place
+  > mnemonic.map: capsule.trace          = V6C   # Output execution trace
+  > mnemonic.map: capsule.modify         = V6D   # Modify existing capsule content
+  > mnemonic.map: capsule.extend         = V6E   # Extend another capsule with additional logic
+  > mnemonic.map: capsule.reload         = V6F   # Reload capsule from source
+  > mnemonic.map: capsule.props          = V70   # Declare expected properties for a capsule or component
+  > mnemonic.map: capsule.diff           = V71   # Show symbolic changes
+  > mnemonic.map: capsule.lock           = V72   # Prevent edits
+  > mnemonic.map: capsule.sign           = V73   # Apply cryptographic signature
+  > mnemonic.map: capsule.unload         = V74   # Unload capsule from memory
+  > mnemonic.map: capsule.attest         = V75   # Record capsule execution evidence
+  > mnemonic.map: capsule.protect        = V76   # Prevent cloning/forking
+  > mnemonic.map: capsule.origin         = V77   # Root record creator / authorship info
+  > mnemonic.map: capsule.verify         = V78   # Check integrity hash/signature
+  > mnemonic.map: capsule.seal           = V79   # Mark as sealed, different from immutable
+  > mnemonic.map: capsule.traceback      = V7A   # Trace modification history recursively
+  > mnemonic.map: capsule.fingerprint    = V7B   # Generate unique capsule hash
+  > mnemonic.map: capsule.audit          = V7C   # Log changes or access
+  > mnemonic.map: capsule.immutify       = V7D   # Permanently freeze capsule
+  > mnemonic.map: capsule.tokenize       = V7E   # Serialize capsule as secure token
+  > mnemonic.map: capsule.reputation     = V7F   # Assign symbolic reputation score
+  > mnemonic.map: capsule.lineage        = V80   # Trace capsule ancestry tree
+  > mnemonic.map: capsule.trust.map      = V81   # Map symbolic trust network
+  > mnemonic.map: audit.compare          = V82   # Compare output of verified/unverified capsules
+  > mnemonic.map: version.track          = V83   # Log and diff symbolic version history
+  > mnemonic.map: version.diff           = V84   # Compare old vs new symbolic state
+  > mnemonic.map: version.patch          = V85   # Apply a diff patch to base
+  > mnemonic.map: version.snapshot       = V86   # Save symbolic snapshot
+  > mnemonic.map: version.restore        = V87   # Restore snapshot from file
+
+  # 🧱 Modular Symbolic Architecture:
+
+  > mnemonic.map: module.define          = V88   # Declare reusable symbolic module
+  > mnemonic.map: module.import          = V89   # Import module
+  > mnemonic.map: module.export          = V8A   # Export symbolic module
+  > mnemonic.map: function.define        = V8B   # Define symbolic function
+  > mnemonic.map: function.call          = V8C   # Call symbolic function
+
+  # 🖥 UI Behavior:
+
+  > mnemonic.map: draw.label        = V90
+  > mnemonic.map: draw.button       = V91
+  > mnemonic.map: draw.input        = V92
+  > mnemonic.map: draw.show         = V93
+  > mnemonic.map: draw.append       = V94
+  > mnemonic.map: draw.clear        = V95
+  > mnemonic.map: draw.update       = V96
+  > mnemonic.map: draw.rect         = V97
+  > mnemonic.map: draw.align        = V98
+  > mnemonic.map: draw.stack        = V99
+  > mnemonic.map: draw.flex         = V9A
+  > mnemonic.map: draw.padding      = V9B
+  > mnemonic.map: draw.margin       = V9C
+  > mnemonic.map: draw.wrap         = V9D
+  > mnemonic.map: draw.scene        = V9E
+  > mnemonic.map: draw.state        = V9F
+  > mnemonic.map: draw.bind         = VA0
+  > mnemonic.map: draw.form         = VA1
+  > mnemonic.map: draw.timeline     = VA2
+  > mnemonic.map: draw.table        = VA3
+  > mnemonic.map: draw.graph        = VA4
+  > mnemonic.map: draw.overlay      = VA5
+  > mnemonic.map: draw.dropdown     = VA6
+  > mnemonic.map: draw.checkbox     = VA7
+  > mnemonic.map: draw.radio        = VA8
+  > mnemonic.map: draw.slider       = VA9
+  > mnemonic.map: draw.modal        = VAA
+  > mnemonic.map: draw.tooltip      = VAB
+  > mnemonic.map: draw.badge        = VAC
+
+  > mnemonic.map: draw.icon                 = VAD
+  > mnemonic.map: draw.image                = VAE
+  > mnemonic.map: draw.card                 = VAF
+  > mnemonic.map: draw.grid                 = VB0
+  > mnemonic.map: draw.list                 = VB1
+  > mnemonic.map: draw.menu                 = VB2
+  > mnemonic.map: draw.tab                  = VB3
+  > mnemonic.map: draw.stepper              = VB4
+  > mnemonic.map: draw.progress             = VB5
+  > mnemonic.map: draw.animate              = VB6
+  > mnemonic.map: draw.audio                = VB7
+  > mnemonic.map: draw.video                = VB8
+  > mnemonic.map: draw.canvas               = VB9
+  > mnemonic.map: draw.3d.scene             = VBA
+  > mnemonic.map: draw.3d.object            = VBB
+  > mnemonic.map: draw.3d.light             = VBC
+  > mnemonic.map: draw.3d.material          = VBD
+  > mnemonic.map: draw.3d.transform         = VBE
+  > mnemonic.map: draw.3d.clear             = VBF
+  > mnemonic.map: render3d.update           = VC0
+  > mnemonic.map: render3d.refresh.viewport = VC1
+  > mnemonic.map: animate.start             = VC2
+  > mnemonic.map: animate.transition        = VC3
+  > mnemonic.map: animate.move              = VC4
+  > mnemonic.map: animate.blink             = VC5
+  > mnemonic.map: animate.shake             = VC6
+  > mnemonic.map: animate.fadeIn            = VC7
+  > mnemonic.map: animate.fadeOut           = VC8
+  > mnemonic.map: style.transition          = VC9
+  > mnemonic.map: timer.set                 = VCA
+  > mnemonic.map: frame.tick                = VCB
+
+  # 📊 Input, Data, Observation, Symbolic Meta / Language:
+
+  > mnemonic.map: read               = WD0   # Read file or input
+  > mnemonic.map: define             = WD1   # Creates assignable definition
+  > mnemonic.map: check              = WD2   # Verify condition or file
+  > mnemonic.map: set                = WD3   # Assign value
+  > mnemonic.map: fetch              = WD4   # Retrieve remote data
+  > mnemonic.map: write              = WD5   # Write to memory or file
+  > mnemonic.map: wait               = WD6   # Pause execution
+  > mnemonic.map: timer              = WD7   # Start timer
+  > mnemonic.map: observe            = WD8   # Track value change
+  > mnemonic.map: input.choice       = WD9   # Present input options
+  > mnemonic.map: input.map          = WDA   # Map inputs to outputs
+  > mnemonic.map: map.define         = WDB   # Define symbolic map structure
+  > mnemonic.map: map.render         = WDC   # Visualize a full symbolic map
+  > mnemonic.map: map.link           = WDD   # Connect two locations in the map
+  > mnemonic.map: map.describe       = WDE   # Show current location
+  > mnemonic.map: move.to            = WDF   # Navigate to a symbolic location
+  > mnemonic.map: move.random        = WE0   # Randomly move to a linked location
+  > mnemonic.map: analyze            = WE1   # Analyze symbolic pattern
+  > mnemonic.map: tagToVerb          = WE2   # Map tag to verb
+  > mnemonic.map: valid_fields       = WE3   # List of allowed fields
+  > mnemonic.map: valid_tags         = WE4   # List of allowed tags
+  > mnemonic.map: valid_verbs        = WE5   # List of allowed verbs
+
+  # 🧬 Symbolic Meta / Language:
+
+  > mnemonic.map: context.overwrite         = WF0   # Replace a single key in the symbolic context
+  > mnemonic.map: context.mutate            = WF1   # Apply a symbolic mutation to a context value
+  > mnemonic.map: context.replace           = WF2   # Fully replace current context mid-runtime
+  > mnemonic.map: memory.patch              = WF3   # Patch a memory map with new key-value pairs
+  > mnemonic.map: capsule.inject            = WF4   # Dynamically inject a symbolic capsule into memory
+  > mnemonic.map: semantic.map              = WF5   # Define alignment between a symbol and its meaning
+  > mnemonic.map: semantic.lookup           = WF6   # Look up and render known meanings
+  > mnemonic.map: semantic.unknown          = WF7   # Prompt for meaning if unknown
+  > mnemonic.map: semantic.match            = WF8   # Fuzzy match a symbol to semantically close terms
+  > mnemonic.map: symbol.define             = WF9   # Define new symbolic element
+  > mnemonic.map: symbol.inspect            = WFA   # Show symbolic properties
+  > mnemonic.map: symbol.resolve            = WFB   # Resolve alias or pointer
+  > mnemonic.map: symbol.alias              = WFC   # Create alias
+  > mnemonic.map: linguistic.setMode        = WFD   # Set runtime linguistic context
+  > mnemonic.map: linguistic.describe       = WFE   # Describe a subject/essence pair in the selected tone
+  > mnemonic.map: linguistic.availableModes = WFF   # Show available modes
+  > mnemonic.map: parse                     = X00   # Parse symbolic input
+  > mnemonic.map: parse.error               = X01   # Trigger error routine for failed parse operations
+  > mnemonic.map: validate.node             = X02   # Validate a single node during execution
+  > mnemonic.map: validate.passed           = X03   # Confirm validation passed for a node or sequence
+  > mnemonic.map: serialize                 = X04   # Serialize symbolic state  
+  > mnemonic.map: verb.define               = X05   # Attach metadata to verbs
+  > mnemonic.map: verb.mood.affect          = X06   # Define mood effects from specific verbs
+  > mnemonic.map: verb.reflect              = X07   # Introspect symbolic usage patterns
+  > mnemonic.map: symbol.verb.map           = X08   # Alias verbs to symbolic core actions
+  > mnemonic.map: story.begin               = X09   # Start a chapter or narrative sequence
+  > mnemonic.map: story.progress            = X0A   # Advance symbolic story memory
+  > mnemonic.map: story.branch              = X0B   # Trigger a branching decision
+  > mnemonic.map: story.arc.define          = X0C   # Define symbolic arcs
+  > mnemonic.map: story.arc.reveal          = X0D   # Show arc contents
+  > mnemonic.map: cause.define              = X0E   # Link cause → effect
+  > mnemonic.map: cause.trigger             = X0F   # Emit an effect if a cause is met
+  > mnemonic.map: grammar.snapshot          = X10   # Save current grammar state into memory
+  > mnemonic.map: grammar.rollback          = X11   # Restore last grammar state from snapshot
+  > mnemonic.map: grammar.fork              = X12   # Create a named grammar branch from current state
+  > mnemonic.map: grammar.load              = X13   # Load a previously forked grammar branch
+  > mnemonic.map: grammar.compare           = X14   # Compare current grammar to previous state
+  > mnemonic.map: grammar.extend            = X15   # Extend current grammar with new tags or syntax
+  > mnemonic.map: grammar.rewrite           = X16   # Rewrite existing symbolic grammar behavior
+  > mnemonic.map: grammar.version           = X17   # Tag grammar state with a version
+  > mnemonic.map: grammar.introspect        = X18   # Inspect grammar structure and definitions
+  > mnemonic.map: grammar.evolve            = X19   # Apply learning or updates to grammar definitions
+
+  # 🧾 Symbolic Grammar Rule Verbs:
+  > mnemonic.map: check   = RULE01   # Symbolic grammar condition
+  > mnemonic.map: error   = RULE02   # Triggered error message
+  > mnemonic.map: suggest = RULE03   # Suggestion for user
+  > mnemonic.map: hint    = RULE04   # Hint for possible resolution
+  > mnemonic.map: do      = RULE05   # Symbolic instruction or fix action
+
+  # 🛡️ System Integrity & Capsule Provenance:
+
+  > mnemonic.map: capsule.verify              = C60   # Verification flag or hash
+  > mnemonic.map: capsule.seal                = C61   # Sealed capsule state
+  > mnemonic.map: capsule.attest              = C62   # Execution attestation proof
+  > mnemonic.map: capsule.lock                = C63   # Lock state (prevents editing)
+  > mnemonic.map: capsule.sign                = C64   # Signature value or flag
+  > mnemonic.map: capsule.fingerprint         = C65   # Capsule's symbolic hash or ID
+  > mnemonic.map: capsule.protect             = C66   # Prevents fork/clone access
+  > mnemonic.map: capsule.audit               = C67   # Log of capsule access or changes
+  > mnemonic.map: capsule.upgrade             = C68   # Set new version and lineage
+  > mnemonic.map: capsule.lineage             = C69   # Walk ancestral chain of a capsule
+  > mnemonic.map: capsule.dependency.resolve  = C6A   # Load required dependencies
+  > mnemonic.map: capsule.package             = C6B   # Define new capsule package
+  > mnemonic.map: capsule.package.export      = C6C   # Save package to file
+  > mnemonic.map: capsule.package.import      = C6D   # Load package from file
+  > mnemonic.map: capsule.package.load        = C6E   # Load and evaluate contents
+  > mnemonic.map: capsule.package.describe    = C6F   # Show metadata of a package
+
+  # 📡 Networking & Internet:
+
+  > mnemonic.map: network.send              = N10   # Send a signal (and optional memory) to another peer
+  > mnemonic.map: network.receive           = N11   # Receive a symbolic signal and memory from a remote
+  > mnemonic.map: network.broadcast         = N12   # Send a signal to all known peers
+  > mnemonic.map: network.syncCapsule       = N13   # Send a capsule to another Lumeria instance
+  > mnemonic.map: remote.send               = N14   # Bridgeable action to actually transmit (define per host)
+  > mnemonic.map: web.ready                 = W10   # Initialize the symbolic web bridge
+  > mnemonic.map: web.dom.inject            = W11   # Add default symbolic DOM
+  > mnemonic.map: web.dom.update            = W12   # Update an element in the DOM
+  > mnemonic.map: web.dom.clear             = W13   # Clear a DOM section
+  > mnemonic.map: web.route.url             = W14   # Route based on symbolic URL path
+  > mnemonic.map: web.form.submit           = W15   # Trigger route from form submission
+  > mnemonic.map: web.route.byForm          = W16   # Resolve form route
+  > mnemonic.map: web.fetch.get             = W17   # Make a symbolic GET request
+  > mnemonic.map: web.fetch.post            = W18   # Make a symbolic POST request
+  > mnemonic.map: web.fetch.result          = W19   # Handle API fetch result
+  > mnemonic.map: web.websocket.connect     = W1A   # Connect to WebSocket server
+  > mnemonic.map: web.websocket.send        = W1B   # Send data to WebSocket
+  > mnemonic.map: websocket.receive.*       = W1C   # Handle incoming WS data
+  > mnemonic.map: web.bridge.init           = W1D   # Full boot sequence trigger
+
+
+  # 🔐🧬 Security, Crypto, Quantum:
+
+  > mnemonic.map: scope.limit                  = S01   # Set execution scope
+  > mnemonic.map: user.role.set                = U01   # Set user role
+  > mnemonic.map: audit.event                  = A01   # Record symbolic event
+
+  > mnemonic.map: sandbox.begin                = X01   # Enter sandbox
+  > mnemonic.map: sandbox.end                  = X02   # Exit sandbox
+  > mnemonic.map: sandbox.eval                 = X03   # Eval in isolated scope
+  > mnemonic.map: sandbox.seal                 = X04   # Lock sandbox outputs
+
+  > mnemonic.map: auth.check                   = A10   # Check auth status
+  > mnemonic.map: require.rights               = A11   # Check symbolic user permission
+  > mnemonic.map: permissions.granted          = A12   # Acknowledge permission success
+  > mnemonic.map: permissions.denied           = A13   # Handle permission failure
+  > mnemonic.map: permissions.check.awakening  = A14   # Check against awakening level
+  > mnemonic.map: permissions.negotiate        = A15   # Prompt user for permission request
+  > mnemonic.map: require.trust                = A16   # Verify trusted context
+  > mnemonic.map: require.identity             = A17   # Confirm identity
+  > mnemonic.map: auth.require                 = A18   # Require authentication
+  > mnemonic.map: auth.token.verify            = A19   # Verify token
+  > mnemonic.map: auth.token.generate          = A1A   # Generate token
+  > mnemonic.map: auth.session.start           = A1B   # Start session
+  > mnemonic.map: auth.session.end             = A1C   # End session
+  > mnemonic.map: require.origin               = A1D   # Validate origin
+  > mnemonic.map: require.context              = A1E   # Enforce context rule
+  > mnemonic.map: require.encrypted            = A1F   # Require encryption
+  > mnemonic.map: require.signature            = A20   # Require signature
+  > mnemonic.map: permission.check             = A21   # Validate permission key
+  > mnemonic.map: access.level.set             = A22   # Set access level
+  > mnemonic.map: access.validate.peer         = A23   # Validate peer access
+  > mnemonic.map: scope.restrict               = S02   # Restrict access
+  > mnemonic.map: audit.log                    = A24   # Append log event
+  > mnemonic.map: session.prove                = A25   # Assert symbolic session integrity
+
+  > mnemonic.map: crypto.sign                  = C01   # Sign data
+  > mnemonic.map: crypto.verify                = C02   # Verify signature
+  > mnemonic.map: crypto.hash                  = C03   # Generate hash
+  > mnemonic.map: crypto.encrypt               = C04   # Encrypt content
+  > mnemonic.map: crypto.decrypt               = C05   # Decrypt content
+  > mnemonic.map: crypto.key.generate          = C06   # Generate keypair
+  > mnemonic.map: crypto.key.rotate            = C07   # Rotate key
+  > mnemonic.map: crypto.protocol              = C08   # Declare cryptographic method
+  > mnemonic.map: crypto.prove                 = C09   # Run proof logic
+  > mnemonic.map: crypto.challenge             = C0A   # Issue challenge
+  > mnemonic.map: verify.hash                  = C0B   # Compare hash of capsule, memory, or signal
+  > mnemonic.map: user.key.set                 = C0C   # Assign cryptographic key to identity
+  > mnemonic.map: user.key.verify              = C0D   # Verify a public key identity match
+  > mnemonic.map: tamper.detect                = C0E   # Detect tampering
+
+  > mnemonic.map: quantum.entangle             = Q01   # Link symbolic states
+  > mnemonic.map: quantum.decode               = Q02   # Collapse into value
+  > mnemonic.map: quantum.observe              = Q03   # Observe entangled state
+  > mnemonic.map: quantum.verify               = Q04   # Verify quantum state
+  > mnemonic.map: capsule.immutify             = Z99   # Freeze capsule structure to block runtime mutation
+
+  # 🧿 Quantum & Multiversal Branching:
+
+  > mnemonic.map: quantum.branch            = Q05   # Split execution across symbolic multiverse branches
+  > mnemonic.map: quantum.observe.memory    = Q06   # Observe memory state across branches
+  > mnemonic.map: quantum.fork              = Q07   # Fork execution into alternate symbolic futures
+  > mnemonic.map: quantum.memory.trace      = Q08   # Trace memory across quantum branch divergence
+
+  # 📡 Distributed / Multi-Agent Capsule Sync:
+
+  > mnemonic.map: sync.state                = SY01  # Sync local and remote symbolic state
+  > mnemonic.map: replicate.to              = SY02  # Push capsule to another runtime
+  > mnemonic.map: chain.record              = SY03  # Add state to distributed capsule ledger
+  > mnemonic.map: chain.verify              = SY04  # Validate distributed capsule chain
+
+  # 🔷 Hardware & Device Verbs:
+
+  > mnemonic.map: device.camera.capture     = DV01  # Capture image from device camera
+  > mnemonic.map: device.microphone.listen  = DV02  # Record or stream audio from mic
+  > mnemonic.map: device.gps.locate         = DV03  # Fetch GPS location
+  > mnemonic.map: device.storage.write      = DV04  # Write file to local storage
+  > mnemonic.map: device.storage.read       = DV05  # Read file from local storage
+  > mnemonic.map: device.sensor.read        = DV06  # Query attached sensor value
+  > mnemonic.map: device.vibrate            = DV07  # Vibrate physical device
+  > mnemonic.map: sensor.read               = DV08  # Generic sensor read
+  > mnemonic.map: geo.locate                = DV09  # Symbolic geolocation resolver
+  > mnemonic.map: camera.capture            = DV10  # Shortcut for symbolic photo trigger
+  > mnemonic.map: input.scan                = DV11  # Symbolic scan for QR, barcode, etc.
+
+  # 🧪 Testing & Assertions:
+
+  > mnemonic.map: test.run                  = TS01  # Run symbolic test sequence
+  > mnemonic.map: test.assert               = TS02  # Evaluate a symbolic assertion
+  > mnemonic.map: test.snapshot             = TS03  # Save system state snapshot during test
+
+  > mnemonic.map: evolve.population         = EV01  # Initialize evolutionary test population
+  > mnemonic.map: evolve.capsule.generate   = EV02  # Generate new capsule candidates
+  > mnemonic.map: evolve.cycle.start        = EV03  # Begin evolution cycle
+  > mnemonic.map: evolve.evaluate.fitness   = EV04  # Assess performance of capsule candidates
+  > mnemonic.map: evolve.fitness.score      = EV05  # Assign fitness score to a candidate
+  > mnemonic.map: evolve.select.best        = EV06  # Choose highest scoring capsules
+  > mnemonic.map: evolve.apply              = EV07  # Apply selected capsules to runtime
+  > mnemonic.map: evolve.cycle.next         = EV08  # Begin next generation
+  > mnemonic.map: evolve.injectFitnessFn    = EV09  # Define custom symbolic fitness function
+
+  # 🔷 Reactive:
+
+  > mnemonic.map: observe.memory            = RM01  # Watch symbolic memory state
+  > mnemonic.map: memory.watch              = RM02  # Attach reactive trigger to memory key
+  > mnemonic.map: signal.stream             = RM03  # Emit live signal stream
+  > mnemonic.map: signal.reflect            = RM04  # Reflect current signal state
+  > mnemonic.map: signal.trace              = RM05  # Trace signal propagation history
+  > mnemonic.map: signal.rewrite            = RM06  # Modify signal in place
+  > mnemonic.map: signal.pause              = RM07  # Temporarily suspend a signal
+  > mnemonic.map: signal.resume             = RM08  # Resume a paused signal
+  > mnemonic.map: react.define              = RM09  # Define reactive rule
+  > mnemonic.map: input.change              = RM10  # Handle live input change event
+
+  # 📚 Symbolic Knowledge & Memory:
+
+  > mnemonic.map: memory.set                = MS01  # Assign value to symbolic memory
+  > mnemonic.map: memory.toggle             = MS02  # Flip boolean memory state
+  > mnemonic.map: memory.scope              = MS03  # Define scoped memory
+  > mnemonic.map: memory.clear              = MS04  # Clear all or scoped memory
+  > mnemonic.map: memory.map.set            = MS05  # Set key-value map in memory
+  > mnemonic.map: memory.map.merge          = MS06  # Merge map into memory
+  > mnemonic.map: memory.list.add           = MS07  # Add item to memory list
+  > mnemonic.map: memory.list.remove        = MS08  # Remove item from memory list
+  > mnemonic.map: memory.trace              = MS09  # Trace symbolic memory changes
+  > mnemonic.map: memory.sync.full          = MS10  # Full memory synchronization with remote
+  > mnemonic.map: memory.sync.quantum       = MS11  # Memory sync across quantum forks
+  > mnemonic.map: session.set               = MS12  # Set session memory
+  > mnemonic.map: knowledge.add             = MS13  # Add symbolic fact to knowledge store
+  > mnemonic.map: knowledge.query           = MS14  # Query symbolic knowledge database
+
+  # 🛠 Dev Tools & Versioning
+
+  > mnemonic.map: editor.open            = DEV01   # Launch editor
+  > mnemonic.map: debug.log              = DEV02   # Log debug message
+  > mnemonic.map: profile.start          = DEV03   # Start profiler
+  > mnemonic.map: profile.end            = DEV04   # End profiler
+  > mnemonic.map: define                 = DEV05   # Define item
+  > mnemonic.map: use                    = DEV06   # Use item
+  > mnemonic.map: version.set            = DEV07   # Set version tag
+  > mnemonic.map: evolve                 = DEV08   # Mark symbolic evolution
+  > mnemonic.map: optimize               = DEV09   # Optimize capsule
+  > mnemonic.map: stack.snapshot         = DEV10   # 🧠 Capture and optionally log the current execution stack
+  > mnemonic.map: capsule.inspect        = DEV11   # 🪪 Reveal a capsule’s fields, props, and symbolic structure
+  > mnemonic.map: trace.memory           = DEV12   # 🧬 Print symbolic memory state to the developer overlay
+  > mnemonic.map: trace.signal           = DEV13   # 📣 Log emitted signals in real time
+  > mnemonic.map: editor.mode            = DEV14   # 🧰 Enable or disable symbolic editing/devtools interface
+
+  # Assertion & Test Verbs:
+
+  > mnemonic.map: assert.equal            = ASSERT01   # ✅ Symbolically compare two values for equality
+  > mnemonic.map: assert.not.equal        = ASSERT02   # ❌ Assert that two symbolic values differ
+  > mnemonic.map: assert.exists           = ASSERT03   # 🕵️ Confirm existence of a memory key or UI element
+  > mnemonic.map: assert.memory.contains  = ASSERT04   # 📦 Check if a memory list/map includes a target
+  > mnemonic.map: test.result             = ASSERT05   # 🧪 Log a test result as pass/fail with label
+
+  # Symbolic Debugging Layer:
+
+  > mnemonic.map: trace.signal            = TRACE01   # Trace the path of a signal across capsules
+  > mnemonic.map: draw.trace              = TRACE02   # Visualize recent draw/memory/emit events symbolically
+  > mnemonic.map: stack.snapshot          = TRACE03   # Save current symbolic execution stack for restoration
+  > mnemonic.map: capsule.flow            = TRACE04   # Symbolically map execution flow of a capsule
+
+[grammar symbol.mnemonics]
+
+  # 🧷 Structural / Raw Symbols:
+  ">"     = do.arrow           # Do Arrow — symbolic action prefix (e.g., > emit: signal.name)
+  "-"     = spark              # Symbol Spark — introduces symbolic statements or entries
+  ":"     = bond               # Name Bond — connects symbolic keys to values
+  "="     = link               # Inner Link — symbolic assignment (set, memory.set, etc.)
+
+  # 🔁 Symbolic Flow & Execution
+  "->"    = emit.pointer       # Pointer Beam — direct symbolic transfer (e.g., → var)
+  "→"     = emit.pointer       # Pointer Beam — alternate glyph for direct transfer
+  "-^"    = echo.recursive     # Recursive Thread — self-reference or echo recursion
+  "⬴"     = echo.recursive     # Recursive Thread — alternate glyph for self-reference
+  "-<"    = fork.reflect       # Reflective Fork — symbolic split with conscious divergence
+  "<^>"   = join.reflect       # Reflective Join — reunites reflective paths into unified state
+
+  # 🌐 Symbolic Scope & Navigation
+  "^"     = context.up         # Echo Reach — reference to higher context or superscope
+  "::"    = scope.path         # Scope Thread — namespace or symbolic boundary delimiter
+  "@"     = anchor             # Anchor Tag — anchors symbolic references or labels
+  "|"     = capsule.embed      # Capsule Frame — quoted capsule or embedded code block
+
+  # 🎭 Symbolic Matching & Logic
+  "~"     = match.fuzzy        # Fuzzy Match — symbolic pattern approximation or loose match
+  "*"     = match.any          # Star Spread — broadcast or wildcard pattern (e.g., match all)
+  "%"     = modulo.ratio       # Ratio Snap — symbolic modulo or proportion reference
+  "!="    = match.different    # Split Truth — inequality or non-match
+  "==="   = match.identical    # True Mirror — deep symbolic identity / full equivalence
+  "&"     = logic.and          # Logic Link — symbolic AND / required conjunction
+  "=>"    = logic.implies      # Symbolic Implication — leads to or causes consequence
+  "!!"    = grammar.strict     # Grammar Lock — assert or enforce strict symbolic condition
+
+  # 📚 Narrative & Language Flow
+  ".."    = range              # Range Drift — defines symbolic ranges (1..10)
+  "..."   = trail              # Thought Trail — continuation or open symbolic path
+  "#"     = comment            # Whisper Tag — comment, label, or non-executing symbolic cue
+
+[/grammar symbol.mnemonics]
+
+
+[grammar reference.mnemonics.blocks]
+
+[logic mnemonic.map.blocks]
+
+  # 🧱 Capsule Units
+  > mnemonic.map: capsule.start          = BL01   #  [capsule <x>]
+  > mnemonic.map: capsule.end            = BL02   #  [/capsule <x>]
+
+  # ⚙️ Logic Execution
+  > mnemonic.map: logic.start            = BL03   #  [logic <x>]
+  > mnemonic.map: logic.end              = BL04   #  [/logic <x>]
+
+  # 🚦 Triggers & Signals
+  > mnemonic.map: when.start             = BL05   #  [when <signal>]
+  > mnemonic.map: when.end               = BL06   #  [/when <signal>]
+  > mnemonic.map: trigger.start          = BL07   #  [trigger <x>]
+  > mnemonic.map: trigger.end            = BL08   #  [/trigger <x>]
+  > mnemonic.map: signal.start           = BL09   #  [signal <x>]
+  > mnemonic.map: signal.end             = BL0A   #  [/signal <x>]
+
+  # 🧠 Memory
+  > mnemonic.map: memory.start           = BL0B   #  [memory <x>]
+  > mnemonic.map: memory.end             = BL0C   #  [/memory <x>]
+
+  # 📜 Grammar Rules
+  > mnemonic.map: grammar.start          = BL0D   #  [grammar <x>]
+  > mnemonic.map: grammar.end            = BL0E   #  [/grammar <x>]
+
+  # 🧬 Structural Layouts
+  > mnemonic.map: struct.start           = BL0F   #  [struct <x>]
+  > mnemonic.map: struct.end             = BL10   #  [/struct <x>]
+
+  # 🧾 Type Declarations
+  > mnemonic.map: type.start             = BL11   #  [type <x>]
+  > mnemonic.map: type.end               = BL12   #  [/type <x>]
+
+  # 🧩 Modules
+  > mnemonic.map: module.start           = BL13   #  [module <x>]
+  > mnemonic.map: module.end             = BL14   #  [/module <x>]
+
+  # 🔐 Scoped Logic
+  > mnemonic.map: scope.start            = BL15   #  [scope <x>]
+  > mnemonic.map: scope.end              = BL16   #  [/scope <x>]
+
+  # 🧭 Context Frames
+  > mnemonic.map: context.start          = BL17   #  [context <x>]
+  > mnemonic.map: context.end            = BL18   #  [/context <x>]
+
+  # 🧾 Meta Blocks
+  > mnemonic.map: meta.start             = BL19   #  [meta <x>]
+  > mnemonic.map: meta.end               = BL1A   #  [/meta <x>]
+
+  # 💬 Comments
+  > mnemonic.map: comment.start          = BL1B   #  [comment <x>]
+  > mnemonic.map: comment.end            = BL1C   #  [/comment <x>]
+
+  # 🧪 Tests
+  > mnemonic.map: test.start             = BL1D   #  [test <x>]
+  > mnemonic.map: test.end               = BL1E   #  [/test <x>]
+
+  # 🚪 Global End
+  > mnemonic.map: end                    = BL1F   #  [end]
+
+[/logic mnemonic.map.blocks]
+
+[/grammar reference.mnemonics.blocks]
+
+[/capsule grammar.mnemonic.referenceVerbs]
+
+# ✅ Known symbolic tags
+[grammar reference.mnemonics.tags]
+
+[logic mnemonic.map.tags]
+
+  # 🏷️ UI Elements
+  > mnemonic.map: label             = UI01   # Symbolic UI label element (maps to draw.label)
+  > mnemonic.map: button            = UI02   # Clickable symbolic button (maps to draw.button)
+  > mnemonic.map: input             = UI03   # Input field for user data (maps to draw.input)
+  > mnemonic.map: show              = UI04   # Reveal or display symbolic content (maps to draw.show)
+  > mnemonic.map: section           = UI05   # Grouping or layout container for UI
+  > mnemonic.map: scene             = UI06   # Represents a visual or logical scene (maps to draw.scene)
+  > mnemonic.map: dropdown          = UI07   # Selectable list component
+  > mnemonic.map: checkbox          = UI08   # Boolean toggle UI
+  > mnemonic.map: radio             = UI09   # Single-choice selector
+  > mnemonic.map: slider            = UI10   # Range selector input
+  > mnemonic.map: modal             = UI11   # Overlay popup window
+  > mnemonic.map: tooltip           = UI12   # Hover or focus hint
+  > mnemonic.map: badge             = UI13   # Small status or notification
+  > mnemonic.map: icon              = UI14   # Visual icon display
+  > mnemonic.map: image             = UI15   # Static or symbolic image
+  > mnemonic.map: card              = UI16   # Grouped content container
+  > mnemonic.map: grid              = UI17   # Grid-based layout block
+  > mnemonic.map: list              = UI18   # Ordered or unordered list
+  > mnemonic.map: menu              = UI19   # Navigation or options list
+  > mnemonic.map: tab               = UI20   # Tabbed content area
+  > mnemonic.map: stepper           = UI21   # Sequential step display
+  > mnemonic.map: progress          = UI22   # Progress indicator
+
+  # 🌐 Symbolic Behavior
+  > mnemonic.map: mood              = BEH01   # Mood directive (sets mood symbolically)
+  > mnemonic.map: log               = BEH02   # Log symbolic state/output (maps to debug.log)
+  > mnemonic.map: emit              = BEH03   # Emit symbolic signal (maps to emit or emit.signal)
+  > mnemonic.map: fork.loot         = BEH04   # Fork into a .loot subcontext
+  > mnemonic.map: draw              = BEH05   # Initiate draw-related logic (UI rendering)
+  > mnemonic.map: input.case        = BEH06   # Trigger conditional based on raw input case
+  > mnemonic.map: memory.trace      = BEH07   # Trace memory access or mutation
+  > mnemonic.map: eval              = BEH08   # Execute symbolic expression
+  > mnemonic.map: signal            = BEH09   # Define or react to symbolic signal
+  > mnemonic.map: input             = BEH10   # Capture symbolic input from user
+  > mnemonic.map: when              = BEH11   # Define conditional trigger
+  > mnemonic.map: do                = BEH12   # Define block of actions to execute
+
+  # 🧠 Cognitive / Memory
+  > mnemonic.map: identity          = COG01   # Declare or update symbolic identity
+  > mnemonic.map: intent            = COG02   # Symbolic intent or goal state
+  > mnemonic.map: emotion           = COG03   # Mood/emotional tag for symbolic state
+  > mnemonic.map: memory            = COG04   # Memory read/write scope
+
+  # 📖 Narrative
+  > mnemonic.map: story             = NAR01   # Narrative root or symbolic chapter
+  > mnemonic.map: arc               = NAR02   # Symbolic story arc definition
+  > mnemonic.map: branch            = NAR03   # Story or signal decision point
+  > mnemonic.map: scene.step        = NAR04   # Represents an individual step in a scene or narrative
+
+  # 🛡️ Security & Access Tags
+  > mnemonic.map: role              = SEC01   # User/system role
+  > mnemonic.map: auth              = SEC02   # Symbolic authentication requirement
+  > mnemonic.map: trust             = SEC03   # Symbolic trust declaration
+  > mnemonic.map: permission        = SEC04   # Permission access block
+
+  # 🧿 Quantum & Alternate State Tags
+  > mnemonic.map: quantum           = QNT01   # Quantum execution context
+  > mnemonic.map: entangle          = QNT02   # Symbolically link states
+
+[/logic mnemonic.map.tags]
+
+[/grammar reference.mnemonics.tags]
+
+[grammar reference.symbolicPrefixes]
+
+  # ✅ Prefixes allowed for symbolic reference bindings
+
+  > mnemonic.map: "> " = do.arrow          # ▶️ Do Arrow — symbolic action prefix (e.g., > emit: signal.name)
+  > mnemonic.map: "-" = spark              # 🔸 Spark — symbolic data statement or entry
+
+  - ">"                    # ▶️ Symbolic action prefix
+  - "-"                    # 🔸 Symbolic data prefix
+
+[/grammar reference.symbolicPrefixes]
+
+
+# ✅ Mapping of composite tags to base verbs
+[grammar reference.tagToVerb]
+  
+  [tagToVerb]
+
+  # 🍿 UI Elements:
+
+  > tagToVerb.map: label = draw.label
+  > mnemonic.map: draw.label = DRAW01
+
+  > tagToVerb.map: button = draw.button
+  > mnemonic.map: draw.button = DRAW02
+
+  > tagToVerb.map: input = draw.input
+  > mnemonic.map: draw.input = DRAW03
+
+  > tagToVerb.map: show = draw.show
+  > mnemonic.map: draw.show = DRAW04
+
+  > tagToVerb.map: section = draw.section
+  > mnemonic.map: draw.section = DRAW05
+
+  > tagToVerb.map: scene = draw.scene
+  > mnemonic.map: draw.scene = DRAW06
+
+  > tagToVerb.map: dropdown = draw.dropdown
+  > mnemonic.map: draw.dropdown = DRAW07
+
+  > tagToVerb.map: checkbox = draw.checkbox
+  > mnemonic.map: draw.checkbox = DRAW08
+
+  > tagToVerb.map: radio = draw.radio
+  > mnemonic.map: draw.radio = DRAW09
+
+  > tagToVerb.map: slider = draw.slider
+  > mnemonic.map: draw.slider = DRAW10
+
+  > tagToVerb.map: modal = draw.modal
+  > mnemonic.map: draw.modal = DRAW11
+
+  > tagToVerb.map: tooltip = draw.tooltip
+  > mnemonic.map: draw.tooltip = DRAW12
+
+  > tagToVerb.map: badge = draw.badge
+  > mnemonic.map: draw.badge = DRAW13
+
+  > tagToVerb.map: icon = draw.icon
+  > mnemonic.map: draw.icon = DRAW14
+
+  > tagToVerb.map: image = draw.image
+  > mnemonic.map: draw.image = DRAW15
+
+  > tagToVerb.map: card = draw.card
+  > mnemonic.map: draw.card = DRAW16
+
+  > tagToVerb.map: grid = draw.grid
+  > mnemonic.map: draw.grid = DRAW17
+
+  > tagToVerb.map: list = draw.list
+  > mnemonic.map: draw.list = DRAW18
+
+  > tagToVerb.map: menu = draw.menu
+  > mnemonic.map: draw.menu = DRAW19
+
+  > tagToVerb.map: tab = draw.tab
+  > mnemonic.map: draw.tab = DRAW20
+
+  > tagToVerb.map: stepper = draw.stepper
+  > mnemonic.map: draw.stepper = DRAW21
+
+  > tagToVerb.map: progress = draw.progress
+  > mnemonic.map: draw.progress = DRAW22
+
+  # 🌐 Symbolic Behavior & Execution:
+
+  > tagToVerb.map: mood = mood.set
+  > mnemonic.map: mood.set = MOOD01
+
+  > tagToVerb.map: log = log
+  > mnemonic.map: log = SYS01
+
+  > tagToVerb.map: emit = emit.signal
+  > mnemonic.map: emit.signal = EMIT01
+
+  > tagToVerb.map: fork.loot = fork.loot
+  > mnemonic.map: fork.loot = FORK01
+
+  > tagToVerb.map: draw = draw.show
+  > mnemonic.map: draw.show = DRAW04
+
+  > tagToVerb.map: input.case = input.capture
+  > mnemonic.map: input.capture = INPUT01
+
+  > tagToVerb.map: memory.trace = memory.trace
+  > mnemonic.map: memory.trace = MEM05
+
+  > tagToVerb.map: eval = eval
+  > mnemonic.map: eval = EXEC01
+
+  > tagToVerb.map: signal = emit.signal
+  > mnemonic.map: emit.signal = EMIT01
+
+  > tagToVerb.map: input = input.capture
+  > mnemonic.map: input.capture = INPUT01
+
+  > tagToVerb.map: when = condition
+  > mnemonic.map: condition = COND01
+
+  > tagToVerb.map: do = eval
+  > mnemonic.map: eval = EXEC01
+
+  # 🧠 Cognitive / Memory:
+
+  > tagToVerb.map: identity = identity.set
+  > mnemonic.map: identity.set = ID01
+
+  > tagToVerb.map: intent = intent.detect
+  > mnemonic.map: intent.detect = INT01
+
+  > tagToVerb.map: emotion = emotion.set
+  > mnemonic.map: emotion.set = FEEL01
+
+  > tagToVerb.map: memory = memory.set
+  > mnemonic.map: memory.set = MEM01
+
+  # 📖 Symbolic Narrative:
+
+  > tagToVerb.map: story = story.begin
+  > mnemonic.map: story.begin = NARR01
+
+  > tagToVerb.map: arc = story.arc.define
+  > mnemonic.map: story.arc.define = NARR02
+
+  > tagToVerb.map: branch = story.branch
+  > mnemonic.map: story.branch = NARR03
+
+  > tagToVerb.map: scene.step = story.progress
+  > mnemonic.map: story.progress = NARR04
+
+  # 🛡️ Security & Access:
+
+  > tagToVerb.map: role = user.role.set
+  > mnemonic.map: user.role.set = SEC01
+
+  > tagToVerb.map: auth = auth.require
+  > mnemonic.map: auth.require = SEC02
+
+  > tagToVerb.map: trust = require.trust
+  > mnemonic.map: require.trust = SEC03
+
+  > tagToVerb.map: permission = permission.check
+  > mnemonic.map: permission.check = SEC04
+
+  # 🧫 Quantum & Alternate State:
+
+  > tagToVerb.map: quantum = quantum.observe
+  > mnemonic.map: quantum.observe = Q01
+
+  > tagToVerb.map: entangle = quantum.entangle
+  > mnemonic.map: quantum.entangle = Q02
+
+  # 🧾 Symbolic Grammar Rule:
+  > tagToVerb.map: check   = check
+  > mnemonic.map: check   = RULE01   # Symbolic grammar condition
+
+  > tagToVerb.map: error   = error
+  > mnemonic.map: error   = RULE02   # Triggered error message
+
+  > tagToVerb.map: suggest = suggest
+  > mnemonic.map: suggest = RULE03   # Suggestion for user
+
+  > tagToVerb.map: hint    = hint
+  > mnemonic.map: hint    = RULE04   # Hint for possible resolution
+
+  > tagToVerb.map: do      = do
+  > mnemonic.map: do      = RULE05   # Symbolic instruction or fix action
+
+  [/tagToVerb]
+
+[/grammar reference.tagToVerb]
+
+[/grammar symbolic.constants]
+
+########################################################################################
+                ## ✅ SYMBOLIC GRAMMAR VALIDATION (MNEMONIC-AWARE) ##
+########################################################################################
+
+[grammar reference.fields.validation]
+
+
+# 📌 ✅ Symbolic Field Validation
+[grammar reference.fields]
+
+[rule field.allowed]
+  check: field.name in [
+    id, tag, name, value, key, type, description,
+    version, author, alias, source, destination,
+    class, parent, children, context, target,
+    signal, emit, when, trigger, memory, logic,
+    draw, mood, state, action, do, condition,
+    foreach, index, capsule, meta
+  ]
+  error: grammar.error.field.invalidName = "❌ Invalid field name — not a recognized symbolic keyword"
+[/rule field.allowed]
+
+[rule field.symbolic.naming]
+  check: field.name matches /^[a-zA-Z0-9_.]+$/
+  error: grammar.error.field.badNaming = "❌ Field names must be symbolic: alphanumeric, flat, and no quotes"
+[/rule field.symbolic.naming]
+
+[rule field.duplicate.check]
+  check: field.name appears only once in any logic/memory/meta block
+  warning: grammar.warn.field.duplicate = "⚠️ Duplicate field — symbolic field names must be unique"
+[/rule field.duplicate.check]
+
+[/grammar reference.fields]
+
+
+# 🔁 ✅ Symbolic Verb Validation
+[grammar reference.verbs]
+
+[rule verb.allowed]
+  check: verb.name in mnemonic.map.keys
+  error: grammar.error.verb.unknown = "❌ Unknown verb — not found in mnemonic map"
+[/rule verb.allowed]
+
+[rule verb.suggest.closestMatch]
+  check: if verb.name not in mnemonic.map.keys
+  suggest: closest.key from mnemonic.map.keys with fuzzy.match(verb.name)
+  hint: grammar.hint.verb.suggestion = "🤖 Did you mean '{{ closest.key }}'?"
+[/rule verb.suggest.closestMatch]
+
+[/grammar reference.verbs]
+
+
+# 🏷️ ✅ Symbolic Tag Validation
+[grammar reference.tags]
+
+[rule tag.allowed]
+  check: tag.name in grammar.reference.tags.valid_tags
+  error: grammar.error.tag.invalid = "❌ Invalid tag — not listed in symbolic tag registry"
+[/rule tag.allowed]
+
+[rule tag.suggest.closestMatch]
+  check: if tag.name not in grammar.reference.tags.valid_tags
+  suggest: closest.tag from grammar.reference.tags.valid_tags using fuzzy.match(tag.name)
+  hint: grammar.hint.tag.suggestion = "🤔 Unknown tag. Maybe you meant '{{ closest.tag }}'?"
+[/rule tag.suggest.closestMatch]
+
+[/grammar reference.tags]
+
+
+# ➡️ ✅ Symbolic Prefix Validation
+[grammar reference.prefixes]
+
+[rule reference.prefix.allowed]
+  check: reference.prefix in grammar.reference.symbolicPrefixes
+  error: grammar.error.prefix.invalid = "❌ Disallowed symbolic prefix — not found in valid prefix set"
+[/rule reference.prefix.allowed]
+
+[/grammar reference.prefixes]
+
+
+# 🔄 ✅ Tag-to-Verb Mapping Validation
+[grammar reference.tagmap]
+
+[rule tag.verb.mapping.valid]
+  check: tag.name in grammar.reference.tagToVerb.tagToVerb.keys
+  check: grammar.reference.tagToVerb.tagToVerb[tag.name] in mnemonic.map.keys
+  error: grammar.error.mapping.badTagVerb = "❌ Invalid tag → verb mapping — verb not found in mnemonic map"
+[/rule tag.verb.mapping.valid]
+
+[rule verb.reverse.mapping.valid]
+  check: verb.name in mnemonic.map.keys
+  suggest: matchingTags = all keys from grammar.reference.tagToVerb.tagToVerb where value == verb.name
+  hint: grammar.hint.verb.mappedTags = "🔁 Verb '{{ verb.name }}' is referenced by tags: {{ matchingTags }}"
+[/rule verb.reverse.mapping.valid]
+
+[/grammar reference.tagmap]
+
+
+# 📦 ✅ Symbolic Type & Struct Validation (Extendable)
+[grammar reference.types]
+
+[rule type.name.valid]
+  check: type.name matches /^[a-zA-Z0-9_]+$/
+  error: grammar.error.type.naming = "❌ Invalid type name — must be alphanumeric symbolic identifier"
+[/rule type.name.valid]
+
+# (Optional future rule: check if struct/type fields align with declared symbolic intent)
+
+[/grammar reference.types]
+
+[/grammar reference.fields.validation]
+
+
+
+########################################################################################
+                    ## ✅ CAPSULE STRUCTURE VALIDATION (MNEMONIC-AWARE) ##
+########################################################################################
+
+[grammar capsule.structure.validation]
+
+# 📦 Validate high-level capsule structure:
+[grammar capsule.rules.structure]
+
+[rule capsule.meta.required]
+  check: capsule must contain one [meta <x>] block
+  error: grammar.error.capsule.meta.missing = "❌ Missing [meta <x>] block — all capsules must declare metadata"
+[/rule capsule.meta.required]
+
+[rule capsule.block.order]
+  check: block.order = meta → trigger/memory → logic/when
+  error: grammar.error.capsule.block.order = "❌ Invalid capsule layout — [meta <x>] must be declared before logic/memory"
+[/rule capsule.block.order]
+
+[rule capsule.single.meta]
+  check: max.count([meta <x>]) == 1
+  error: grammar.error.capsule.meta.duplicate = "❌ Multiple [meta <x>] blocks detected — only one allowed per capsule"
+[/rule capsule.single.meta]
+
+[rule capsule.begin.end]
+  check: every [capsule <x>] must have a closing [/capsule <x>]
+  error: grammar.error.capsule.unclosed = "❌ Unclosed capsule — ensure matching [/capsule <x>] is present"
+[/rule capsule.begin.end]
+
+[rule capsule.wrapping.required]
+  check: all top-level blocks must be wrapped in a [capsule <x>] block
+  error: grammar.error.capsule.notWrapped = "❌ File must wrap symbolic content in a [capsule <x>] block"
+[/rule capsule.wrapping.required]
+
+[/grammar capsule.rules.structure]
+
+
+# 🧠 Validate capsule naming and syntax:
+[grammar capsule.rules.naming]
+
+[rule capsule.name.required]
+  check: [capsule] tag must specify a symbolic name
+  error: grammar.error.capsule.name.required = "❌ Missing or invalid capsule name — symbolic name required"
+[/rule capsule.name.required]
+
+[rule capsule.name.valid]
+  check: name matches /^[a-z][a-z0-9_.]+$/
+  error: grammar.error.capsule.name.invalid = "❌ Capsule name must use symbolic dot-path (e.g., core0.loader)"
+[/rule capsule.name.valid]
+
+[rule capsule.name.unique]
+  check: capsule.name must be unique within file
+  error: grammar.error.capsule.name.duplicate = "❌ Duplicate capsule name — must be unique per file"
+[/rule capsule.name.unique]
+
+[/grammar capsule.rules.naming]
+
+[/grammar capsule.structure.validation]
+
+########################################################################################
+                    ## ✅ GRAMMAR BLOCK STRUCTURE VALIDATION (MNEMONIC-AWARE) ##
+########################################################################################
+
+[grammar grammar.structure.validation]
+
+# 📚 Validate correct use and placement of grammar blocks:
+[grammar grammar.rules.structure]
+
+[rule grammar.block.begin.end]
+  check: every [grammar <x>] must have matching [/grammar <x>]
+  error: grammar.error.grammar.block.unclosed = "❌ Unclosed grammar block — missing [/grammar <x>]"
+[/rule grammar.block.begin.end]
+
+[rule grammar.name.required]
+  check: [grammar <x>] must include symbolic name (e.g., logic.rules)
+  error: grammar.error.grammar.name.invalid = "❌ Grammar block name missing or invalid — use symbolic path"
+[/rule grammar.name.required]
+
+[rule grammar.structure.flat]
+  check: grammar blocks must not nest within [logic], [trigger], or [memory] zones
+  error: grammar.error.grammar.nesting.invalid = "❌ Grammar blocks must remain at top capsule scope — nesting not allowed"
+[/rule grammar.structure.flat]
+
+[rule grammar.inside.capsule]
+  check: grammar blocks must reside inside a [capsule <x>] wrapper
+  error: grammar.error.grammar.outsideCapsule = "❌ Grammar block declared outside of capsule"
+[/rule grammar.inside.capsule]
+
+[/grammar grammar.rules.structure]
+
+
+# 🧪 Validate grammar rule declarations:
+[grammar grammar.rules.declarations]
+
+[rule rule.name.required]
+  check: all [rule <x>] blocks must specify symbolic name
+  error: grammar.error.rule.name.missing = "❌ Missing rule name — expected `rule: symbolic.identifier`"
+[/rule rule.name.required]
+
+[rule rule.structure.required]
+  check: each rule must include one or more of: check, do, error
+  error: grammar.error.rule.structure.invalid = "❌ Rule missing logic — must contain `check:`, `do:`, or `error:`"
+[/rule rule.structure.required]
+
+[rule rule.syntax.symbolic]
+  check: rule contents must only use symbolic keys (`check:`, `error:`, `do:`)
+  error: grammar.error.rule.syntax.nonSymbolic = "❌ Rule contains non-symbolic syntax"
+[/rule rule.syntax.symbolic]
+
+[rule rule.nesting.prohibited]
+  check: rule body must not include nested [grammar], [logic], or [capsule] blocks
+  error: grammar.error.rule.nesting = "❌ Nested blocks not allowed inside rules — rules must be atomic"
+[/rule rule.nesting.prohibited]
+
+[/grammar grammar.rules.declarations]
+
+[/grammar grammar.structure.validation]
+
+
+########################################################################################
+                        # 🧠 MEMORY VALIDATION BLOCK (MNEMONIC-AWARE) #
+########################################################################################
+
+[grammar memory.validation]
+
+# 🔍 Validate memory access rules and symbolic structure
+[grammar memory.symbolic.rules]
+
+[rule memory.block.optional]
+  check: memory block is optional but must follow symbolic structure if present
+  warning: memory.warn.block.missing = "⚠️ Memory block not found — skipping memory schema validation"
+[/rule memory.block.optional]
+
+[rule memory.symbolic.syntax]
+  check: all memory operations must follow symbolic mnemonic format: `memory.op: key = value`
+  error: memory.error.syntax.invalid = "❌ Invalid memory line — must use symbolic ops like `memory.set:`"
+[/rule memory.symbolic.syntax]
+
+[rule memory.flat.structure]
+  check: memory block must not contain nested maps, trees, or structs
+  error: memory.error.structure.nested = "❌ Nested memory structures are disallowed — flatten into dot-paths"
+[/rule memory.flat.structure]
+
+[rule memory.valid.operations]
+  check: memory operation verb in [set, get, append, remove, write, sync, shift, increment, decrement]
+  error: memory.error.operation.unknown = "❌ Invalid memory operation — must be symbolic and valid"
+[/rule memory.valid.operations]
+
+[rule memory.contextual.use]
+  check: values in memory.set must use symbolic references: `ctx.`, `memory.`, `length(...)`, etc.
+  warning: memory.warn.context.unbound = "⚠️ Symbolic memory set may lack contextual reference — verify input"
+[/rule memory.contextual.use]
+
+[/grammar memory.symbolic.rules]
+
+
+# 🧱 Structural and syntax validation of `[memory]` blocks
+[grammar memory.structure.rules]
+
+[rule memory.zone.optional]
+  check: memory zone is optional — symbolic memory ops allowed inline in logic
+  note: memory.note.zone.flexible = "ℹ️ Memory blocks are optional — inline `memory.set:` is valid"
+[/rule memory.zone.optional]
+
+[rule memory.symbolic.syntax]
+  check: all memory verbs must use symbolic colon format (e.g., `memory.set:`)
+  error: memory.error.syntax.colonMissing = "❌ Use symbolic colon format — `memory.set:` not `memory.set =`"
+[/rule memory.symbolic.syntax]
+
+[rule memory.operations.allowed]
+  check: memory op in [set, get, write, append, remove, shift, sync, increment]
+  error: memory.error.op.disallowed = "❌ Invalid memory operation — use only symbolic ops"
+[/rule memory.operations.allowed]
+
+[rule memory.target.structure]
+  check: memory keys must follow dot-path style (e.g., `memory.visual.state`)
+  error: memory.error.key.invalid = "❌ Invalid key format — use symbolic dot-path structure"
+[/rule memory.target.structure]
+
+[rule memory.assignment.prohibited]
+  check: memory must not use `=` assignments outside symbolic verb (e.g., avoid `memory.x = y`)
+  error: memory.error.syntax.assignment = "❌ Use `memory.set:` instead of raw `memory.x = y`"
+[/rule memory.assignment.prohibited]
+
+[rule memory.get.redirection]
+  check: all `memory.get:` must include `→ target` redirect
+  error: memory.error.get.redirectMissing = "❌ Missing `→` redirection in `memory.get:`"
+[/rule memory.get.redirection]
+
+[rule memory.usage.inside.conditions]
+  check: memory keys may be used inside `check:` clauses if symbolic format is respected
+  error: memory.error.condition.reference = "❌ Invalid memory key inside `check:` — must use symbolic format"
+[/rule memory.usage.inside.conditions]
+
+[/grammar memory.structure.rules]
+
+[/grammar memory.validation]
+
+########################################################################################
+                        ## 🧾 META VALIDATION BLOCK (MNEMONIC-AWARE) ##
+########################################################################################
+
+[grammar meta.validation]
+
+# 🧷 Structure and symbolic formatting of meta blocks
+[grammar meta.rules.structure]
+
+[rule meta.block.required]
+  check: capsule contains [meta <x>]
+  check: capsule contains [/meta <x>]
+  error: meta.error.block.missing = "❌ Missing required [meta <x>] and [/meta <x>] block"
+[/rule meta.block.required]
+
+[rule meta.structure.symbolic]
+  check: all lines in meta block use symbolic format: `set: key = value`
+  error: meta.error.syntax.invalid = "❌ Invalid meta syntax — use `set:` with symbolic keys"
+[/rule meta.structure.symbolic]
+
+[rule meta.syntax.prohibited]
+  check: meta block does not include `{}`, YAML, or JSON-style structures
+  error: meta.error.syntax.structure = "❌ Structured meta formats (YAML/JSON) are not allowed"
+[/rule meta.syntax.prohibited]
+
+[rule meta.duplicate.fields]
+  check: no duplicate keys exist inside meta block
+  error: meta.error.keys.duplicate = "❌ Duplicate key found in meta block — each key must be unique"
+[/rule meta.duplicate.fields]
+
+[/grammar meta.rules.structure]
+
+
+# 🧠 Semantic content validation of meta values
+[grammar meta.rules.semantic]
+
+[rule meta.required.fields]
+  check: keys `type`, `version`, and `purpose` exist inside meta block
+  error: meta.error.fields.required = "❌ Missing meta keys — required: type, version, purpose"
+[/rule meta.required.fields]
+
+[rule meta.semantic.version.valid]
+  check: version value matches pattern /^\d+\.\d+(\.\d+)?$/
+  error: meta.error.version.format = "❌ Invalid version — must follow semantic versioning (e.g. 1.0 or 0.4.2)"
+[/rule meta.semantic.version.valid]
+
+[/grammar meta.rules.semantic]
+
+[/grammar meta.validation]
+
+########################################################################################
+                        ## 🚦 WHEN VALIDATION BLOCK (MNEMONIC-AWARE) ##
+########################################################################################
+
+[grammar when.validation]
+
+# 🔍 Validate correctness of signal handling and `when:` expressions:
+[grammar when.rules]
+
+[rule when.block.required]
+  check: every capsule handling signals must contain at least one `[when <signal> <x>]` block
+  error: when.error.block.missing = "❌ Capsule missing required signal handling block"
+[/rule when.block.required]
+
+[rule when.signal.format]
+  check: `when <signal> <x>` uses symbolic signal name format (e.g., `signal.name`)
+  error: when.error.signal.format = "❌ Invalid signal name — must follow symbolic dot notation"
+[/rule when.signal.format]
+
+[rule when.signal.defined]
+  check: each `when:` signal is emitted somewhere using `emit: <signal>`
+  warning: when.warn.signal.unhandled = "⚠️ Unhandled signal — no corresponding emit found"
+[/rule when.signal.defined]
+
+[rule when.unique]
+  check: signal appears only once per capsule unless intentionally scoped
+  error: when.error.signal.duplicate = "❌ Duplicate `when:` handler for signal — conflict risk"
+[/rule when.unique]
+
+[/grammar when.rules]
+
+
+# 🧠 Validate `when` block structure and syntax usage:
+[grammar when.syntax]
+
+[rule when.requires.do]
+  check: each `check:` condition includes symbolic `do:` response
+  error: when.error.do.missing = "❌ Missing `do:` block in conditional — symbolic effect required"
+[/rule when.requires.do]
+
+[rule when.condition.required]
+  check: conditions evaluate symbolic references like `ctx.`, `memory.`
+  error: when.error.condition.invalid = "❌ Invalid conditional — use symbolic references"
+[/rule when.condition.required]
+
+[rule when.structure.flat]
+  check: `when:` blocks use flat symbolic lines — no JSON/YAML nesting
+  error: when.error.structure.nested = "❌ Nested structure in `when:` — use flat symbolic syntax"
+[/rule when.structure.flat]
+
+[rule when.execution.verb]
+  check: `do:` actions only include valid symbolic verbs (e.g., `emit:`, `memory.set:`, `log:`)
+  error: when.error.verb.invalid = "❌ Invalid verb in `do:` — must be symbolic operation"
+[/rule when.execution.verb]
+
+[rule when.context.binding]
+  check: signal handler references use symbolic context (e.g., `ctx.signal`)
+  warning: when.warn.context.unclear = "⚠️ Missing context reference — verify dynamic value source"
+[/rule when.context.binding]
+
+[/grammar when.syntax]
+
+
+# 🧱 Validate structure and behavior of `when:` signal blocks:
+[grammar when.structure]
+
+[rule when.requires.signal]
+  check: each `when:` declaration includes valid signal trigger
+  error: when.error.signal.missing = "❌ Missing signal in `when:` declaration"
+[/rule when.requires.signal]
+
+[rule when.signal.symbolic]
+  check: signal name is symbolic (no brackets, spaces, or special chars)
+  error: when.error.signal.name = "❌ Signal must use dot-path symbolic name"
+[/rule when.signal.symbolic]
+
+[rule when.conditional.structure]
+  check: conditional logic follows grammar (`check:`, `if:`, `else:`)
+  error: when.error.conditional.syntax = "❌ Conditional malformed — use symbolic control grammar"
+[/rule when.conditional.structure]
+
+[rule when.block.nesting]
+  check: `when:` blocks do not contain nested `when:` or capsule blocks
+  error: when.error.block.nested = "❌ `when:` must remain flat — no nested execution blocks allowed"
+[/rule when.block.nesting]
+
+[rule when.reaction.structure]
+  check: all responses in `check:` use `do:` or `emit:` — no raw expressions
+  error: when.error.reaction.structure = "❌ Improper symbolic response — must use `do:` or `emit:`"
+[/rule when.reaction.structure]
+
+[rule when.redundancy.check]
+  check: no duplicate `when:` signal declarations unless scoped intentionally
+  warning: when.warn.redundancy = "⚠️ Redundant signal handler — may conflict at runtime"
+[/rule when.redundancy.check]
+
+[/grammar when.structure]
+
+[/grammar when.validation]
+
+########################################################################################
+                        ## ⚙️ LOGIC VALIDATION BLOCK (MNEMONIC-AWARE) ##
+########################################################################################
+
+[grammar logic.validation]
+
+# ✅ Validate logic block structure and reuse rules:
+[grammar logic.rules]
+
+[rule logic.block.required]
+  check: capsule must contain at least one `[logic <x>]` block
+  error: logic.error.block.missing = "❌ Capsule missing logic block — execution path undefined"
+[/rule logic.block.required]
+
+[rule logic.block.naming]
+  check: `[logic <x>]` uses valid symbolic name (alphanumeric or dot-path)
+  error: logic.error.block.name.invalid = "❌ Invalid symbolic name for logic block"
+[/rule logic.block.naming]
+
+[rule logic.import.reuse]
+  check: `[i logic <x>]` targets a valid named `[logic <x>]` block
+  error: logic.error.import.invalid = "❌ Invalid or unresolved logic reference in `[i logic <x>]`"
+[/rule logic.import.reuse]
+
+[rule logic.structure.flat]
+  check: logic blocks are flat — no nested YAML, bracket trees, or indented hierarchy
+  error: logic.error.structure.nested = "❌ Logic must remain flat and symbolic — no nested formats allowed"
+[/rule logic.structure.flat]
+
+[/grammar logic.rules]
+
+
+# 🧠 Validate symbolic syntax and semantic usage inside logic blocks:
+[grammar logic.syntax]
+
+[rule logic.symbolic.required]
+  check: every line starts with symbolic verb syntax (e.g., `emit:`, `memory.set:`)
+  error: logic.error.syntax.symbolic.missing = "❌ Logic line missing symbolic verb prefix"
+[/rule logic.symbolic.required]
+
+[rule logic.symbolic.syntax]
+  check: no lines use raw values, control statements, or imperative keywords
+  error: logic.error.syntax.invalid = "❌ Non-symbolic syntax found — use symbolic grammar only"
+[/rule logic.symbolic.syntax]
+
+[rule logic.no.assignment]
+  check: `=` is never used as top-level assignment unless inside symbolic verbs (e.g., `set: x = y`)
+  error: logic.error.assignment.prohibited = "❌ Direct assignment is not allowed — use `memory.set:`"
+[/rule logic.no.assignment]
+
+[rule logic.flow.control]
+  check: `if:` and `check:` branches are followed by valid `do:` instruction block
+  error: logic.error.flow.control = "❌ Conditional missing `do:` block — flow incomplete"
+[/rule logic.flow.control]
+
+[rule logic.loop.syntax]
+  check: loops use `foreach:` with flat symbolic logic (`do:` only)
+  error: logic.error.loop.structure = "❌ Invalid loop — use symbolic `foreach:` and `do:` only"
+[/rule logic.loop.syntax]
+
+[rule logic.allowed.verbs]
+  check: verbs must exist in `grammar.valid_verbs` or `grammar.tagToVerb.values`
+  error: logic.error.verb.unknown = "❌ Unknown symbolic action — verb not recognized"
+[/rule logic.allowed.verbs]
+
+[rule logic.context.refs]
+  check: symbolic references must use `ctx.`, `memory.`, `length(...)`, etc.
+  warning: logic.warn.reference.missing = "⚠️ Unscoped symbolic input — reference may be undefined"
+[/rule logic.context.refs]
+
+[/grammar logic.syntax]
+
+[/grammar logic.validation]
+
+########################################################################################
+                  ## 🔔 TRIGGER VALIDATION BLOCK (MNEMONIC-AWARE) ##
+########################################################################################
+
+[grammar trigger.validation]
+
+# 📐 Basic structure and syntax rules for trigger declarations:
+[grammar trigger.rules.basic]
+
+[rule trigger.block.optional]
+  check: trigger declarations are optional but must follow symbolic form when present
+  note: trigger.note.optional = "ℹ️ Capsule may omit triggers if driven externally"
+[/rule trigger.block.optional]
+
+[rule trigger.syntax.symbolic]
+  check: all triggers use `trigger: signal.name` format
+  error: trigger.error.syntax.invalid = "❌ Invalid trigger syntax — must be symbolic format"
+[/rule trigger.syntax.symbolic]
+
+[rule trigger.structure.flat]
+  check: each trigger is declared on its own line
+  error: trigger.error.structure.multiple = "❌ Multiple triggers on a single line — separate into flat declarations"
+[/rule trigger.structure.flat]
+
+[rule trigger.signal.name]
+  check: signal uses symbolic naming (e.g., `pulse.tick`)
+  error: trigger.error.signal.naming = "❌ Invalid signal name — must use dot-path symbolic structure"
+[/rule trigger.signal.name]
+
+[/grammar trigger.rules.basic]
+
+
+# 🧠 Validate logic consistency of trigger references:
+[grammar trigger.rules.logic]
+
+[rule trigger.structure.valid]
+  check: trigger matches symbolic pattern `trigger: signal.name`
+  error: trigger.error.format = "❌ Trigger format invalid — must be `trigger: symbolic.signal`"
+[/rule trigger.structure.valid]
+
+[rule trigger.signal.redundant]
+  check: trigger exists but no matching `[when signal.name]` block is present
+  do: memory.append: grammar.validation.errors = "⚠️ Redundant trigger — no matching signal handler block"
+[/rule trigger.signal.redundant]
+
+[rule trigger.signal.unknown]
+  check: signal is not defined in `system.signal.registry`
+  warning: trigger.warn.signal.unknown = "⚠️ Trigger references unknown or unregistered signal"
+[/rule trigger.signal.unknown]
+
+[/grammar trigger.rules.logic]
+
+
+# 🧬 Advanced semantic validation for symbolic triggers:
+[grammar trigger.rules.advanced]
+
+[rule trigger.valid.names]
+  check: signal name uses valid symbolic identifiers (dot-path)
+  error: trigger.error.name.invalid = "❌ Invalid trigger name — use dot-separated symbolic syntax"
+[/rule trigger.valid.names]
+
+[rule trigger.duplicate]
+  check: no duplicate trigger signals exist in a single capsule
+  warning: trigger.warn.duplicate = "⚠️ Duplicate trigger signal — may indicate redundant logic"
+[/rule trigger.duplicate]
+
+[rule trigger.without.handler]
+  check: each trigger corresponds to at least one `[when signal]` block
+  warning: trigger.warn.no.handler = "⚠️ Trigger declared with no matching `when:` block"
+[/rule trigger.without.handler]
+
+[rule trigger.without.emit]
+  check: triggered signal must eventually be emitted by a capsule
+  warning: trigger.warn.unemitted = "⚠️ Trigger signal never emitted — capsule may never activate"
+[/rule trigger.without.emit]
+
+[/grammar trigger.rules.advanced]
+
+[/grammar trigger.validation]
+
+########################################################################################
+                    ## 🖼️ DRAW VALIDATION BLOCK (MNEMONIC-AWARE) ##
+########################################################################################
+
+[grammar draw.validation]
+
+# 📐 Validate draw: symbolic instructions and rendering behavior
+[grammar draw.structure]
+
+[rule draw.symbolic.required]
+  check: all draw actions use symbolic verb (e.g., `draw.label:`)
+  error: draw.error.symbolic.required = "❌ Invalid draw instruction — must use symbolic form"
+[/rule draw.symbolic.required]
+
+[rule draw.flat.syntax]
+  check: all draw expressions are flat — no nested objects or YAML trees
+  error: draw.error.syntax.nested = "❌ Nested draw syntax is invalid — use flat symbolic draw format"
+[/rule draw.flat.syntax]
+
+[rule draw.target.defined]
+  check: draw targets (scene, label, button, icon) exist in system.render.schema
+  error: draw.error.target.unknown = "❌ Undefined draw target — not in render schema"
+[/rule draw.target.defined]
+
+[/grammar draw.structure]
+
+
+# 🧠 Validate semantic correctness of draw expressions
+[grammar draw.semantic]
+
+[rule draw.label.required]
+  check: `draw.label:` includes static string or interpolated symbol
+  error: draw.error.label.empty = "❌ Label text missing in `draw.label:`"
+[/rule draw.label.required]
+
+[rule draw.scene.naming]
+  check: `draw.scene:` uses symbolic identifier (no spaces or quotes)
+  error: draw.error.scene.naming = "❌ Invalid scene name — must be symbolic"
+[/rule draw.scene.naming]
+
+[rule draw.context.refs]
+  check: draw values reference `ctx.` or `memory.`
+  warning: draw.warn.unbound.input = "⚠️ Draw value lacks symbolic reference — verify context"
+[/rule draw.context.refs]
+
+[rule draw.redraw.allowed]
+  check: draw instructions may repeat across loops or updates
+  note: draw.note.idempotent = "ℹ️ Draws are idempotent — safe to reissue"
+[/rule draw.redraw.allowed]
+
+[/grammar draw.semantic]
+
+
+# 🔧 Validate block layout and structure of draw declarations
+[grammar draw.rules.structure]
+
+[rule draw.block.optional]
+  check: `[draw <x>]` is optional — can appear in `[logic]` or `[when]`
+  note: draw.note.block.optional = "ℹ️ Draw block is optional — allowed inline or as scene layout"
+[/rule draw.block.optional]
+
+[rule draw.verb.required]
+  check: each draw line starts with symbolic verb (e.g., `draw.button:`)
+  error: draw.error.verb.missing = "❌ Missing draw verb — must use symbolic `draw.*:`"
+[/rule draw.verb.required]
+
+[rule draw.structure.flat]
+  check: draw blocks must remain flat — no JSON or object nesting
+  error: draw.error.structure.flat = "❌ Draw structure must be flat — avoid object nesting"
+[/rule draw.structure.flat]
+
+[rule draw.target.naming]
+  check: all draw identifiers follow dot-path naming (e.g., `scene.menu`, `label.prompt`)
+  error: draw.error.target.naming = "❌ Invalid draw target name — use symbolic dot-path"
+[/rule draw.target.naming]
+
+[/grammar draw.rules.structure]
+
+
+# ✅ Validate supported draw actions and symbolic UI components
+[grammar draw.rules.actions]
+
+[rule draw.allowed.verbs]
+  check: verbs allowed include: `draw.scene:`, `draw.label:`, `draw.button:`, `draw.icon:`, `draw.image:`
+  error: draw.error.verb.unsupported = "❌ Unsupported draw verb — not in symbolic UI spec"
+[/rule draw.allowed.verbs]
+
+[rule draw.scene.required]
+  check: each render capsule includes at least one `draw.scene:`
+  warning: draw.warn.scene.missing = "⚠️ Missing `draw.scene:` — capsule lacks visual context"
+[/rule draw.scene.required]
+
+[rule draw.inputs.symbolic]
+  check: all dynamic inputs reference `ctx.` or `memory.` or symbolic expressions
+  warning: draw.warn.input.static = "⚠️ Draw value appears static — expected symbolic expression"
+[/rule draw.inputs.symbolic]
+
+[/grammar draw.rules.actions]
+
+[/grammar draw.validation]
+
+########################################################################################
+                      ## 🧠 MOOD VALIDATION BLOCK (MNEMONIC-AWARE) ##
+########################################################################################
+
+[grammar mood.validation]
+
+# 🧠 Validate symbolic mood expressions and emotional transitions
+[grammar mood.rules]
+
+[rule mood.symbolic.syntax]
+  check: mood expressions use `mood.set:` or `mood.sync:` format
+  error: mood.error.syntax.invalid = "❌ Invalid mood expression — must use symbolic form like `mood.set:`"
+[/rule mood.symbolic.syntax]
+
+[rule mood.valid.states]
+  check: mood states are symbolic identifiers (e.g., `neutral`, `focus.sharp`)
+  error: mood.error.state.invalid = "❌ Invalid mood state — use symbolic dot-path or flat identifier"
+[/rule mood.valid.states]
+
+[rule mood.multiple.states]
+  check: mood.set: may contain comma-separated symbolic states
+  note: mood.note.states.layered = "ℹ️ Multiple moods can be layered (e.g., `mood.set: calm, alert`)"
+[/rule mood.multiple.states]
+
+[rule mood.context.refs]
+  check: dynamic mood expressions must use `ctx.` or `memory.` references
+  warning: mood.warn.context.missing = "⚠️ Mood reference missing context — expected symbolic source"
+[/rule mood.context.refs]
+
+[rule mood.block.optional]
+  check: mood expressions can appear inline or in `[mood]` block
+  note: mood.note.block.optional = "ℹ️ Mood block optional — use inline in logic or when zones"
+[/rule mood.block.optional]
+
+[/grammar mood.rules]
+
+
+# 🧱 Validate structural rules for mood expressions and context
+[grammar mood.structure]
+
+[rule mood.block.flat]
+  check: mood lines must be flat symbolic declarations
+  error: mood.error.structure.nested = "❌ Nested mood declarations not allowed — use flat symbolic lines"
+[/rule mood.block.flat]
+
+[rule mood.allowed.verbs]
+  check: valid verbs are `mood.set:` and `mood.sync:` only
+  error: mood.error.verb.unsupported = "❌ Unsupported mood verb — only `mood.set:` or `mood.sync:` allowed"
+[/rule mood.allowed.verbs]
+
+[rule mood.sync.contextual]
+  check: `mood.sync:` targets a valid symbolic reference (e.g., scene, actor)
+  error: mood.error.sync.target.missing = "❌ Sync target required — use symbolic reference with `mood.sync:`"
+[/rule mood.sync.contextual]
+
+[/grammar mood.structure]
+
+[/grammar mood.validation]
+[/capsule grammarSpec]
+[/capsule grammar.engine]

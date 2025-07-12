@@ -1,0 +1,472 @@
+[capsule core22.symbolicCompiler]
+
+[memory compiled.* /]
+[memory capsule /]
+[memory grammar.previous /]
+[memory grammar.versions /]
+[memory grammar.diff /]
+[memory valid_verbs /]
+[memory package /]
+[memory lineage /]
+[memory diff.result /]
+[memory result /]
+[memory ctx.importedCapsules /]
+
+[capsule compile.capsule]
+
+[trigger compile.capsule /]
+
+[logic compile.capsule]
+  > log: "🛠️ Compiling capsule '{{ ctx.capsule_id }}'"
+  > emit: compile.extractPatterns
+  > emit: compile.optimizeStructure
+  > emit: compile.finalize
+  > emit: capsule.package  # Patch to resolve orphan trigger
+  > emit: version.patch
+  > emit: version.restore
+
+[/logic compile.capsule]
+
+[/capsule compile.capsule]
+
+[capsule compile.extractPatterns]
+
+[trigger compile.extractPatterns /]
+
+[logic compile.extractPatterns]
+  > log: "🔍 Extracting known symbolic patterns"
+  > memory.set: ctx.patterns = match.patterns(ctx.capsule_body)
+[/logic compile.extractPatterns]
+
+[/capsule compile.extractPatterns]
+
+[capsule compile.optimizeStructure]
+
+[trigger compile.optimizeStructure /]
+
+[logic compile.optimizeStructure]
+  > log: "📐 Optimizing execution structure"
+  > memory.set: ctx.optimized = optimize.symbols(ctx.patterns)
+[/logic compile.optimizeStructure]
+
+[/capsule compile.optimizeStructure]
+
+[capsule compile.finalize]
+
+[trigger compile.finalize /]
+
+[logic compile.finalize]
+  > memory.set: compiled.{{ ctx.capsule_id }} = ctx.optimized
+  > log: "✅ Compilation complete for '{{ ctx.capsule_id }}'"
+[/logic compile.finalize]
+
+[/capsule compile.finalize]
+
+[capsule compile.abort]
+
+[trigger compile.abort /]
+
+[logic compile.abort]
+  > log: "🚫 Compilation aborted for '{{ ctx.capsule_id }}'"
+  > memory.delete: compiled.{{ ctx.capsule_id }}
+[/logic compile.abort]
+
+[/capsule compile.abort]
+
+[capsule compile.list]
+
+[trigger compile.list /]
+
+[logic compile.list]
+  > draw.label: "📦 Compiled Capsules:"
+  > draw.append: compiled.*
+[/logic compile.list]
+
+[/capsule compile.list]
+
+[capsule capsule.upgrade]
+
+[trigger capsule.upgrade /]
+
+[logic capsule.upgrade]
+  > draw.label: "🧬 Upgrading capsule: {{ ctx.capsule_id }}"
+  > memory.set: capsule[ctx.capsule_id].parent = ctx.previous
+  > memory.set: capsule[ctx.capsule_id].version = ctx.version
+  > memory.set: capsule[ctx.capsule_id].hash = hash(ctx.contents)
+  > memory.set: capsule[ctx.capsule_id].lastUpdated = now
+[/logic capsule.upgrade]
+
+[/capsule capsule.upgrade]
+
+[capsule capsule.fingerprint]
+
+[trigger capsule.fingerprint /]
+
+[logic capsule.fingerprint]
+  > memory.set: capsule[ctx.capsule_id].hash = hash(ctx.contents)
+  > memory.set: capsule[ctx.capsule_id].version = now
+[/logic capsule.fingerprint]
+
+[/capsule capsule.fingerprint]
+
+[capsule capsule.lineage]
+
+[trigger capsule.lineage /]
+
+[logic capsule.lineage]
+  > draw.label: "🔗 Capsule Lineage: {{ ctx.capsule_id }}"
+  > memory.set: lineage = []
+  > set: current = ctx.capsule_id
+  [loop parent.walk]
+    check: capsule[current].parent exists
+    do:
+      > memory.list.add: lineage = capsule[current].parent
+      > set: current = capsule[current].parent
+  [/loop parent.walk]
+  > draw.append: lineage
+[/logic capsule.lineage]
+
+[/capsule capsule.lineage]
+
+[capsule capsule.dependency.resolve]
+
+[trigger capsule.dependency.resolve /]
+
+[logic capsule.dependency.resolve]
+  > draw.label: "📎 Resolving dependencies for {{ ctx.capsule_id }}"
+  > memory.set: deps = capsule[ctx.capsule_id].dependencies
+  - foreach: deps
+    do: > emit: capsule.load {{ item }}
+[/logic capsule.dependency.resolve]
+
+[/capsule capsule.dependency.resolve]
+
+[capsule capsule.inferType]
+
+[trigger capsule.inferType /]
+
+[logic capsule.inferType]
+  [condition capsule.contains.ui]
+    check: ctx.body contains "draw."
+    then: > memory.set: capsule[ctx.capsule_id].type = "ui"
+  [/condition capsule.contains.ui]
+
+  [condition capsule.contains.logic]
+    check: ctx.body contains "emit:" or "memory."
+    then: > memory.set: capsule[ctx.capsule_id].type = "logic"
+  [/condition capsule.contains.logic]
+
+  [condition capsule.contains.state]
+    check: ctx.body contains "memory.set"
+    then: > memory.set: capsule[ctx.capsule_id].type = "state"
+  [/condition capsule.contains.state]
+[/logic capsule.inferType]
+
+[/capsule capsule.inferType]
+
+[capsule capsule.describe]
+
+[trigger capsule.describe /]
+
+[logic capsule.describe]
+  > draw.label: "🧾 Capsule: {{ ctx.capsule_id }}"
+  > draw.label: "• Version: {{ capsule[ctx.capsule_id].version }}"
+  > draw.label: "• Type: {{ capsule[ctx.capsule_id].type }}"
+  > draw.label: "• Parent: {{ capsule[ctx.capsule_id].parent }}"
+  > draw.label: "• Hash: {{ capsule[ctx.capsule_id].hash }}"
+[/logic capsule.describe]
+
+[/capsule capsule.describe]
+
+[capsule capsule.package]
+
+[trigger capsule.package /]
+
+[logic capsule.package]
+  > memory.set: package.id = ctx.name
+  > memory.set: package.version = ctx.version
+  > memory.set: package.capsules = ctx.capsules
+  > memory.set: package.entry = ctx.entry
+  > memory.set: package.meta = ctx.meta
+  > emit: capsule.package.export
+[/logic capsule.package]
+
+[/capsule capsule.package]
+
+[capsule capsule.package.export]
+
+[trigger capsule.package.export /]
+
+[logic capsule.package.export]
+  > memory.save: file = "packages/{{ package.id }}.pkg.lum" from = package
+  > draw.label: "📦 Capsule package '{{ package.id }}' saved"
+[/logic capsule.package.export]
+
+[/capsule capsule.package.export]
+
+[capsule capsule.package.import]
+
+[trigger capsule.package.import /]
+
+[logic capsule.package.import]
+  > memory.load: file = ctx.path into = package
+  > memory.set: ctx.importedCapsules = package.capsules
+  > emit: capsule.package.load
+[/logic capsule.package.import]
+
+[/capsule capsule.package.import]
+
+[capsule capsule.package.load]
+
+[trigger capsule.package.load /]
+
+[logic capsule.package.load]
+  - foreach: ctx.importedCapsules
+    do: > eval: {{ item }}
+  > emit: run.{{ package.entry }}
+[/logic capsule.package.load]
+
+[/capsule capsule.package.load]
+
+[capsule capsule.package.describe]
+
+[trigger capsule.package.describe /]
+
+[logic capsule.package.describe]
+  > draw.label: "📦 Package ID: {{ package.id }}"
+  > draw.label: "🔢 Version: {{ package.version }}"
+  > draw.label: "🚀 Entry: {{ package.entry }}"
+  > draw.append: package.meta
+[/logic capsule.package.describe]
+
+[/capsule capsule.package.describe]
+
+[capsule grammar.snapshot]
+
+[trigger grammar.snapshot /]
+
+[logic grammar.snapshot]
+  > memory.set: grammar.previous = valid_verbs
+  > draw.label: "📸 Grammar snapshot saved"
+[/logic grammar.snapshot]
+
+[/capsule grammar.snapshot]
+
+[capsule grammar.rollback]
+
+[trigger grammar.rollback /]
+
+[logic grammar.rollback]
+  > memory.set: valid_verbs = grammar.previous
+  > draw.label: "↩️ Rolled back grammar to previous snapshot"
+[/logic grammar.rollback]
+
+[/capsule grammar.rollback]
+
+[capsule grammar.fork]
+
+[trigger grammar.fork /]
+
+[logic grammar.fork]
+  > memory.set: grammar.versions[ctx.name] = valid_verbs
+  > draw.label: "🌱 Forked grammar into branch {{ ctx.name }}"
+[/logic grammar.fork]
+
+[/capsule grammar.fork]
+
+[capsule grammar.load]
+
+[trigger grammar.load /]
+
+[logic grammar.load]
+  > memory.set: valid_verbs = grammar.versions[ctx.name]
+  > draw.label: "📂 Loaded grammar branch {{ ctx.name }}"
+[/logic grammar.load]
+
+[/capsule grammar.load]
+
+[capsule grammar.compare]
+
+[trigger grammar.compare /]
+
+[logic grammar.compare]
+  > memory.set: grammar.diff = diff(grammar.previous, valid_verbs)
+  > draw.label: "📊 Grammar diff result: {{ grammar.diff }}"
+[/logic grammar.compare]
+
+[/capsule grammar.compare]
+
+[capsule version.diff]
+
+[trigger version.diff /]
+
+[logic version.diff]
+  > memory.set: diff.result = symbolic.diff(ctx.old, ctx.new)
+  > draw.label: "🧬 Symbolic diff computed"
+  > draw.append: diff.result
+[/logic version.diff]
+
+[/capsule version.diff]
+
+[capsule version.patch]
+
+[trigger version.patch /]
+
+[logic version.patch]
+  > memory.set: result = symbolic.patch(ctx.base, ctx.delta)
+  > emit: version.patch.applied
+[/logic version.patch]
+
+[/capsule version.patch]
+
+[capsule version.patch.applied]
+
+[trigger version.patch.applied /]
+
+[logic version.patch.applied]
+  > draw.label: "✅ Patch applied successfully"
+[/logic version.patch.applied]
+
+[/capsule version.patch.applied]
+
+[capsule version.snapshot]
+
+[trigger version.snapshot /]
+
+[logic version.snapshot]
+  > memory.save: file = "snapshots/{{ ctx.name }}.lum" from = ctx.target
+  > draw.label: "📸 Snapshot saved as '{{ ctx.name }}'"
+[/logic version.snapshot]
+
+[/capsule version.snapshot]
+
+[capsule version.restore]
+
+[trigger version.restore /]
+
+[logic version.restore]
+  > memory.load: file = "snapshots/{{ ctx.name }}.lum" into = ctx.target
+  > emit: version.restore.complete
+[/logic version.restore]
+
+[/capsule version.restore]
+
+[capsule version.restore.complete]
+
+[trigger version.restore.complete /]
+
+[logic version.restore.complete]
+  > draw.label: "⏪ Snapshot '{{ ctx.name }}' restored"
+[/logic version.restore.complete]
+
+[/capsule version.restore.complete]
+
+[capsule compile.reflectMemory]
+
+[trigger compile.reflectMemory /]
+
+[logic compile.reflectMemory]
+  > draw.label: "🧠 Compiler Memory State"
+  > draw.list: source = compiled.*
+  > draw.chart: source = grammar.versions
+  > draw.log: source = capsule
+[/logic compile.reflectMemory]
+
+[/capsule compile.reflectMemory]
+
+[/capsule core22.symbolicCompiler]
+[trigger run. /]
+
+[logic run.]
+  > log: "🚧 Trigger stub for run."
+[/logic run.]
+
+[logic emit.compile.list]
+  > emit: compile.list
+  > log: "🚧 Emit stub for compile.list"
+[/logic emit.compile.list]
+
+[logic emit.grammar.compare]
+  > emit: grammar.compare
+  > log: "🚧 Emit stub for grammar.compare"
+[/logic emit.grammar.compare]
+
+[logic emit.grammar.rollback]
+  > emit: grammar.rollback
+  > log: "🚧 Emit stub for grammar.rollback"
+[/logic emit.grammar.rollback]
+
+[logic emit.grammar.load]
+  > emit: grammar.load
+  > log: "🚧 Emit stub for grammar.load"
+[/logic emit.grammar.load]
+
+[logic emit.capsule.package.describe]
+  > emit: capsule.package.describe
+  > log: "🚧 Emit stub for capsule.package.describe"
+[/logic emit.capsule.package.describe]
+
+[logic emit.capsule.dependency.resolve]
+  > emit: capsule.dependency.resolve
+  > log: "🚧 Emit stub for capsule.dependency.resolve"
+[/logic emit.capsule.dependency.resolve]
+
+[logic emit.capsule.upgrade]
+  > emit: capsule.upgrade
+  > log: "🚧 Emit stub for capsule.upgrade"
+[/logic emit.capsule.upgrade]
+
+[logic emit.capsule.inferType]
+  > emit: capsule.inferType
+  > log: "🚧 Emit stub for capsule.inferType"
+[/logic emit.capsule.inferType]
+
+[logic emit.grammar.snapshot]
+  > emit: grammar.snapshot
+  > log: "🚧 Emit stub for grammar.snapshot"
+[/logic emit.grammar.snapshot]
+
+[logic emit.capsule.describe]
+  > emit: capsule.describe
+  > log: "🚧 Emit stub for capsule.describe"
+[/logic emit.capsule.describe]
+
+[logic emit.version.snapshot]
+  > emit: version.snapshot
+  > log: "🚧 Emit stub for version.snapshot"
+[/logic emit.version.snapshot]
+
+[logic emit.compile.abort]
+  > emit: compile.abort
+  > log: "🚧 Emit stub for compile.abort"
+[/logic emit.compile.abort]
+
+[logic emit.version.diff]
+  > emit: version.diff
+  > log: "🚧 Emit stub for version.diff"
+[/logic emit.version.diff]
+
+[logic emit.capsule.lineage]
+  > emit: capsule.lineage
+  > log: "🚧 Emit stub for capsule.lineage"
+[/logic emit.capsule.lineage]
+
+[logic emit.capsule.package.import]
+  > emit: capsule.package.import
+  > log: "🚧 Emit stub for capsule.package.import"
+[/logic emit.capsule.package.import]
+
+[logic emit.compile.reflectMemory]
+  > emit: compile.reflectMemory
+  > log: "🚧 Emit stub for compile.reflectMemory"
+[/logic emit.compile.reflectMemory]
+
+[logic emit.grammar.fork]
+  > emit: grammar.fork
+  > log: "🚧 Emit stub for grammar.fork"
+[/logic emit.grammar.fork]
+
+[logic emit.compile.capsule]
+  > emit: compile.capsule
+  > log: "🚧 Emit stub for compile.capsule"
+[/logic emit.compile.capsule]

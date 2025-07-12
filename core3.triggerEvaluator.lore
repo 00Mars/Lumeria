@@ -1,0 +1,316 @@
+[capsule triggerEngine]
+
+  [capsule triggerEngine.boot]
+
+  [trigger boot.triggerEvaluator /]
+
+  [logic triggerEngine.boot]
+    > log: "⚙️ [core3] Booting trigger evaluation engine..."
+    > emit: evaluate.triggers
+  [/logic triggerEngine.boot]
+
+  [when boot.triggerEvaluator] > emit: triggerEngine.boot [/when boot.triggerEvaluator]
+
+  [/capsule triggerEngine.boot]
+
+  [capsule triggerEngine.evaluate]
+
+  [trigger evaluate.triggers /]
+
+  [logic triggerEngine.evaluate]
+    > log: "🔍 [trigger] Evaluating matching triggers for: {{memory.current_signal}}"
+    > memory.set: matched.triggers = []
+
+    > loop: memory.all_triggers as trigger
+      do:
+        [condition signal.match]
+          check: trigger.when.signal == memory.current_signal
+          then: > memory.list.add: matched.triggers = trigger
+        [/condition signal.match]
+
+        [condition phase.match]
+          check: trigger.when.phase == memory.current_signal
+          then: > memory.list.add: matched.triggers = trigger
+        [/condition phase.match]
+
+        [condition input.match]
+          check: trigger.when.input and memory.current_signal startswith "input:"
+          then: > memory.list.add: matched.triggers = trigger
+        [/condition input.match]
+
+        [condition custom.condition]
+          check: trigger.when.condition and eval(trigger.when.condition)
+          then: > memory.list.add: matched.triggers = trigger
+        [/condition custom.condition]
+    > emit: triggerEngine.execute
+    > emit: signal.route
+  [/logic triggerEngine.evaluate]
+
+  [when evaluate.triggers] > emit: triggerEngine.evaluate [/when evaluate.triggers]
+
+  [/capsule triggerEngine.evaluate]
+
+  [capsule triggerEngine.execute]
+
+  [trigger triggerEngine.execute /]
+
+  [logic triggerEngine.execute]
+    [condition no.triggers]
+      check: matched.triggers is empty
+      then:
+        - log: "✅ [trigger] No more triggers to evaluate"
+        > emit: signal.route
+        - return
+    [/condition no.triggers]
+
+    > memory.set: current_trigger = memory.shift(matched.triggers)
+
+    [condition already.executed]
+      check: memory.executed.triggers contains [current_trigger.id, memory.current_signal]
+      then:
+        - log: "🟡 [trigger] Skipping already executed: {{current_trigger.id}}"
+        > emit: triggerEngine.execute
+        - return
+    [/condition already.executed]
+
+    > memory.list.add: executed.triggers = [current_trigger.id, memory.current_signal]
+    > emit: triggerEngine.run
+  [/logic triggerEngine.execute]
+
+  [when triggerEngine.execute] > emit: triggerEngine.execute [/when triggerEngine.execute]
+
+  [/capsule triggerEngine.execute]
+
+  [capsule triggerEngine.run]
+
+  [trigger triggerEngine.run /]
+
+  [logic triggerEngine.run]
+    > memory.set: current_signal = memory.current_signal
+    > memory.set: loop_index = 0
+    > memory.set: loop.actions = current_trigger.do
+
+    [condition has.actions]
+      check: memory.loop.actions exists
+      then: > emit: triggerEngine.loop
+    [/condition has.actions]
+  [/logic triggerEngine.run]
+
+  [when triggerEngine.run] > emit: triggerEngine.run [/when triggerEngine.run]
+
+  [/capsule triggerEngine.run]
+
+  [capsule triggerEngine.loop]
+
+  [trigger triggerEngine.loop /]
+
+  [logic triggerEngine.loop]
+    [condition done]
+      check: memory.loop_index >= len(memory.loop.actions)
+      then:
+        - log: "✅ [trigger] Finished executing: {{current_trigger.id}}"
+        > emit: triggerEngine.execute
+        - return
+    [/condition done]
+
+    > memory.set: action = memory.loop.actions[memory.loop_index]
+
+    [condition trace.on]
+      check: memory.trace.enabled == true
+      then:
+        - log: "🧠 [trace] Signal: {{current_signal}} | Action: {{action}}"
+        > memory.list.add: trace.log = "{{current_signal}} => {{action}}"
+    [/condition trace.on]
+
+    [condition action.log]            check: action startswith "log:"               then: > log: {{ action after "log:" }}
+    [condition action.draw.label]     check: action startswith "draw.label:"        then: > draw.label: {{ action after "draw.label:" }}
+    [condition action.draw.scene]     check: action startswith "draw.scene:"        then: > draw.scene: {{ action after "draw.scene:" }}
+    [condition action.emit]           check: action startswith "emit:"              then: > emit: {{ action after "emit:" }}
+    [condition action.eval]           check: action startswith "eval:"              then: > eval: {{ action after "eval:" }}
+    [condition action.memory.set]     check: action startswith "memory.set:"        then: > memory.set: {{ action after "memory.set:" }}
+    [condition action.memory.toggle]  check: action startswith "memory.toggle:"     then: > memory.toggle: {{ action after "memory.toggle:" }}
+    [condition action.stack.push]     check: action startswith "stack.push:"        then: > eval: {{ action }}
+    [condition action.stack.pop]      check: action startswith "stack.pop:"         then: > eval: {{ action }}
+    [condition action.fork.loot]      check: action startswith "fork.loot:"         then: > eval: {{ action }}
+    [condition action.exit]           check: action startswith "exit.context"       then: > eval: {{ action }}
+    [condition action.q.branch]       check: action startswith "quantum.branch"     then: > emit: quantum.branch
+    [condition action.q.observe]      check: action startswith "quantum.observe"    then: > emit: quantum.observe
+
+    [condition action.eval.alt]
+      check: action matches "eval:*"
+      then:
+        > memory.set: eval.target = {{ action after "eval:" }}
+        > emit: capsule.execute
+    [/condition action.eval.alt]
+
+    [condition unknown.action]
+      check: action not startswith any:
+        - "log:"
+        - "draw.label:"
+        - "draw.scene:"
+        - "emit:"
+        - "eval:"
+        - "memory.set:"
+        - "memory.toggle:"
+        - "stack.push:"
+        - "stack.pop:"
+        - "fork.loot:"
+        - "exit.context"
+        - "quantum.branch"
+        - "quantum.observe"
+      then:
+        - log: "⚠️ [trigger] Unknown action: {{action}}"
+    [/condition unknown.action]
+
+    > memory.set: loop_index += 1
+    > emit: triggerEngine.loop
+  [/logic triggerEngine.loop]
+
+  [when triggerEngine.loop] > emit: triggerEngine.loop [/when triggerEngine.loop]
+
+  [/capsule triggerEngine.loop]
+
+[/capsule triggerEngine]
+
+[capsule signalRouting]
+
+  [capsule signal.route]
+
+  [trigger signal.route /]
+
+  [logic signal.route]
+    > memory.set: ctx.routed = false
+    > loop: memory.signalRoutes as route
+      do:
+        [condition match]
+          check: route.signal == ctx.signal
+          then:
+            > emit: {{ route.target }}
+            > memory.set: ctx.routed = true
+        [/condition match]
+
+    [condition not.routed]
+      check: ctx.routed == false
+      then: > log: "⚠️ Unrouted signal: {{ctx.signal}}"
+    [/condition not.routed]
+  [/logic signal.route]
+
+  [when signal.route] > emit: signal.route [/when signal.route]
+
+  [/capsule signal.route]
+
+  [capsule signal.route.add]
+
+  [trigger signal.route.add /]
+
+  [logic signal.route.add]
+    > memory.list.add: memory.signalRoutes += [{ signal: ctx.signal, target: ctx.target }]
+    > log: "📡 Route added for signal '{{ctx.signal}}' → '{{ctx.target}}'"
+  [/logic signal.route.add]
+
+  [when signal.route.add] > emit: signal.route.add [/when signal.route.add]
+
+  [/capsule signal.route.add]
+
+  [capsule audit.log]
+  [trigger audit.log /]
+  [logic audit.log]
+    > draw.log: source = ctx.context
+    > memory.append: audit.history = ctx
+  [/logic audit.log]
+  [/capsule audit.log]
+  
+  [capsule signal.router]
+
+  [trigger route.signal /]
+
+  [logic signal.router]
+    > switch: ctx.signal
+      case: "auth.fail"       do: > emit: scene.authError
+      case: "auth.success"    do: > emit: scene.dashboard
+      case: "input.received"  do: > emit: handle.input
+      case: "system.overload" do: > draw.label: "⚠️ System overload detected"
+      default:
+        - log: "⚠️ Unhandled signal: {{ctx.signal}}"
+  [/logic signal.router]
+
+  [when route.signal] > emit: signal.router [/when route.signal]
+
+  [/capsule signal.router]
+
+  [capsule interpolate]
+
+  [trigger interpolate /]
+
+  [logic interpolate]
+    > memory.set: ctx.templateString = ctx.input
+    > memory.set: ctx.interpolated =
+        ctx.templateString.replaceAll(/{{(.*?)}}/, match =>
+          memory.get(match[1].trim())
+        )
+    > emit: interpolate.done
+  [/logic interpolate]
+
+  [when interpolate] > emit: interpolate [/when interpolate]
+
+  [/capsule interpolate]
+
+[/capsule signalRouting]
+
+[trigger handle.input /]
+
+[logic handle.input]
+  > log: "🚧 Trigger stub for handle.input"
+[/logic handle.input]
+
+[trigger scene.dashboard /]
+
+[logic scene.dashboard]
+  > log: "🚧 Trigger stub for scene.dashboard"
+[/logic scene.dashboard]
+
+[trigger triggerEngine.boot /]
+
+[logic triggerEngine.boot]
+  > log: "🚧 Trigger stub for triggerEngine.boot"
+[/logic triggerEngine.boot]
+
+[trigger scene.authError /]
+
+[logic scene.authError]
+  > log: "🚧 Trigger stub for scene.authError"
+[/logic scene.authError]
+
+[trigger quantum.branch /]
+
+[logic quantum.branch]
+  > log: "🚧 Trigger stub for quantum.branch"
+[/logic quantum.branch]
+
+[trigger signal.router /]
+
+[logic signal.router]
+  > log: "🚧 Trigger stub for signal.router"
+[/logic signal.router]
+
+[trigger interpolate.done /]
+
+[logic interpolate.done]
+  > log: "🚧 Trigger stub for interpolate.done"
+[/logic interpolate.done]
+
+[trigger triggerEngine.evaluate /]
+
+[logic triggerEngine.evaluate]
+  > log: "🚧 Trigger stub for triggerEngine.evaluate"
+[/logic triggerEngine.evaluate]
+
+[logic emit.route.signal]
+  > emit: route.signal
+  > log: "🚧 Emit stub for route.signal"
+[/logic emit.route.signal]
+
+[logic emit.boot.triggerEvaluator]
+  > emit: boot.triggerEvaluator
+  > log: "🚧 Emit stub for boot.triggerEvaluator"
+[/logic emit.boot.triggerEvaluator]

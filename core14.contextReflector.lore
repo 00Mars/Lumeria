@@ -1,0 +1,493 @@
+[capsule core15.contextReflector]
+
+[capsule contextReflector.boot]
+[trigger contextReflector.boot /]
+[logic contextReflector.boot]
+  > log: "🪞 [context] Initializing context reflector..."
+  > emit: contextReflector.init
+[/logic contextReflector.boot]
+[/capsule contextReflector.boot]
+
+[capsule contextReflector.init]
+[trigger contextReflector.init /]
+[memory context.snapshot /]
+[memory context.previous /]
+[memory context.diff /]
+[memory context.trace /]
+[logic contextReflector.init]
+  > memory.set: context.snapshot = {}
+  > memory.set: context.previous = {}
+  > memory.set: context.diff = {}
+  > memory.set: context.trace = []
+  > emit: context.reflect
+  > emit: causality.trace  # Patch to resolve orphan trigger
+[/logic contextReflector.init]
+[/capsule contextReflector.init]
+
+[capsule context.reflect]
+[trigger context.reflect /]
+[logic context.reflect]
+  > log: "🔍 [context] Capturing and reflecting runtime context..."
+  > memory.set: context.previous = context.snapshot
+  > memory.set: context.snapshot = system.context()
+  > emit: mirror.capture.context
+  > emit: context.analyze
+[/logic context.reflect]
+[/capsule context.reflect]
+
+[capsule context.analyze]
+[trigger context.analyze /]
+[logic context.analyze]
+  > memory.set: context.diff = compare(context.previous, context.snapshot)
+  > memory.append: context.trace = context.diff
+  > emit: context.visualize
+[/logic context.analyze]
+[/capsule context.analyze]
+
+[capsule context.visualize]
+[trigger context.visualize /]
+[logic context.visualize]
+  > draw.label: "📌 Current Context State"
+  > draw.json: source = context.snapshot
+  > draw.label: "📤 Delta Since Last Snapshot"
+  > draw.json: source = context.diff
+[/logic context.visualize]
+[/capsule context.visualize]
+
+[capsule context.rewind]
+[trigger context.rewind /]
+[logic context.rewind]
+  > memory.set: context.snapshot = context.previous
+  > log: "⏪ [context] Rewound to previous context state"
+  > emit: context.reflect
+[/logic context.rewind]
+[/capsule context.rewind]
+
+[capsule context.pulse]
+[trigger pulse.context /]
+[logic context.pulse]
+  > emit: context.reflect
+[/logic context.pulse]
+[/capsule context.pulse]
+
+[capsule context.trace.view]
+[trigger context.trace.view /]
+[logic context.trace.view]
+  > draw.label: "🧠 Context Change History"
+  > draw.list: source = context.trace
+[/logic context.trace.view]
+[/capsule context.trace.view]
+
+[capsule context.compare]
+[trigger context.compare /]
+[logic context.compare]
+  > memory.set: context.diff = compare(ctx.a, ctx.b)
+  > draw.label: "🔬 Comparison Between Context A & B"
+  > draw.json: source = context.diff
+[/logic context.compare]
+[/capsule context.compare]
+
+[capsule mirror.capture.context]
+[trigger mirror.capture.context /]
+[logic mirror.capture.context]
+  > memory.set: mirror.lastContext = ctx
+  > draw.label: "🪞 Captured current context"
+[/logic mirror.capture.context]
+[/capsule mirror.capture.context]
+
+[capsule mirror.reflect.context]
+[trigger mirror.reflect.context /]
+[logic mirror.reflect.context]
+  > draw.label: "📷 Mirror Snapshot:"
+  > draw.append: mirror.lastContext
+[/logic mirror.reflect.context]
+[/capsule mirror.reflect.context]
+
+[capsule mirror.capture.signal]
+[trigger mirror.capture.signal /]
+[logic mirror.capture.signal]
+  > memory.set: mirror.lastSignal = ctx.signal
+  > draw.label: "🪞 Captured signal '{{ ctx.signal }}'"
+[/logic mirror.capture.signal]
+[/capsule mirror.capture.signal]
+
+[capsule mirror.match.check]
+[trigger mirror.match.check /]
+[logic mirror.match.check]
+  [condition match]
+    check: ctx.signal == mirror.lastSignal
+    then:
+      > draw.label: "🔁 Signal matches last mirror: {{ ctx.signal }}"
+      > emit: mirror.capture.signal
+      > emit: ctx.onMatch
+  [condition mismatch]
+    check: ctx.signal != mirror.lastSignal
+    then:
+      > draw.label: "🚫 Signal mismatch: {{ ctx.signal }} ≠ {{ mirror.lastSignal }}"
+      > emit: ctx.onFail
+[/logic mirror.match.check]
+[/capsule mirror.match.check]
+
+[capsule mirror.overlay.scene]
+[trigger mirror.overlay.scene /]
+[logic mirror.overlay.scene]
+  > scene.push: mirrorOverlay
+  > draw.label: "🪞 Mirrored Overlay"
+  > draw.append: mirror.lastContext
+[/logic mirror.overlay.scene]
+[/capsule mirror.overlay.scene]
+
+[capsule mirror.reflect.self]
+[trigger mirror.self /]
+[logic mirror.reflect.self]
+  > draw.label: "🪞 You are now reflecting on yourself..."
+  > draw.append: memory.self.trace
+[/logic mirror.reflect.self]
+[/capsule mirror.reflect.self]
+
+[capsule mirror.snapshot]
+[trigger mirror.snapshot /]
+[logic mirror.snapshot]
+  > memory.set: memory.self.trace = memory.snapshot
+  > draw.label: "📸 Self state mirrored"
+[/logic mirror.snapshot]
+[/capsule mirror.snapshot]
+
+[capsule gravity.pulse]
+[trigger gravity.pulse /]
+[logic gravity.pulse]
+  > memory.scan: active.contexts into = gravity.fields
+  > emit: gravity.evaluate
+[/logic gravity.pulse]
+[/capsule gravity.pulse]
+
+[capsule gravity.evaluate]
+[trigger gravity.evaluate /]
+[logic gravity.evaluate]
+  > for.each: gravity.fields as item
+    do:
+      > memory.set: gravity.force[{item.id}] = compute.gravity(item)
+  > emit: gravity.pull
+[/logic gravity.evaluate]
+[/capsule gravity.evaluate]
+
+[capsule gravity.pull]
+[trigger gravity.pull /]
+[logic gravity.pull]
+  > memory.set: gravity.maxContext = max(gravity.force)
+  > memory.set: ctx.focus = gravity.maxContext
+  > emit: context.align
+[/logic gravity.pull]
+[/capsule gravity.pull]
+
+[capsule gravity.override]
+[trigger gravity.override /]
+[logic gravity.override]
+  > input: "Override context focus:"
+  > memory.set: ctx.focus = resolve.context({{ input }})
+  > emit: context.align
+[/logic gravity.override]
+[/capsule gravity.override]
+
+[capsule context.align]
+[trigger context.align /]
+[logic context.align]
+  > mood.set: ctx.focus.mood
+  > memory.scope: ctx.focus.memory
+  > draw.label: "🌀 Focus realigned to {{ ctx.focus.id }}"
+[/logic context.align]
+[/capsule context.align]
+
+[capsule resonance.scan]
+[trigger resonance.scan /]
+[logic resonance.scan]
+  > memory.list: all.contexts into = resonance.pool
+  > emit: resonance.compare
+[/logic resonance.scan]
+[/capsule resonance.scan]
+
+[capsule resonance.compare]
+[trigger resonance.compare /]
+[logic resonance.compare]
+  > for.each: resonance.pool as item
+    do:
+      > memory.set: similarity = compare.context(ctx.active, item)
+      [condition similarity.high]
+        check: similarity > 0.7
+        then: > memory.add: resonance.links += item.id
+  > emit: resonance.transmit
+[/logic resonance.compare]
+[/capsule resonance.compare]
+
+[capsule resonance.transmit]
+[trigger resonance.transmit /]
+[logic resonance.transmit]
+  > for.each: resonance.links as item
+    do: > emit: echo.transmit to = item
+[/logic resonance.transmit]
+[/capsule resonance.transmit]
+
+[capsule resonance.listen]
+[trigger echo.transmit /]
+[logic resonance.listen]
+  > log: "[resonance] Ripple received from {{ ctx.source }}"
+  > draw.overlay: "🫧 Resonant ping from {{ ctx.source }}"
+[/logic resonance.listen]
+[/capsule resonance.listen]
+
+[capsule resonance.align]
+[trigger resonance.align /]
+[logic resonance.align]
+  > input: "Which context to resonate with?"
+  > memory.set: ctx.resonatingWith = {{ input }}
+  > memory.set: ctx.source = system.id
+  > emit: echo.transmit to = ctx.resonatingWith
+[/logic resonance.align]
+[/capsule resonance.align]
+
+[capsule entity.memory.set]
+[trigger entity.memory.set /]
+[logic entity.memory.set]
+  > memory.set: entity.memory[ctx.entity][ctx.key] = ctx.value
+  > log: "🧠 Set memory for {{ ctx.entity }}: {{ ctx.key }} = {{ ctx.value }}"
+[/logic entity.memory.set]
+[/capsule entity.memory.set]
+
+[capsule entity.memory.get]
+[trigger entity.memory.get /]
+[logic entity.memory.get]
+  > memory.set: ctx.result = entity.memory[ctx.entity][ctx.key]
+  > log: "🔍 Retrieved memory for {{ ctx.entity }}: {{ ctx.key }} = {{ ctx.result }}"
+[/logic entity.memory.get]
+[/capsule entity.memory.get]
+
+[capsule entity.memory.clear]
+[trigger entity.memory.clear /]
+[logic entity.memory.clear]
+  > memory.clear: entity.memory[ctx.entity]
+  > log: "🧹 Cleared memory for {{ ctx.entity }}"
+[/logic entity.memory.clear]
+[/capsule entity.memory.clear]
+
+[capsule entity.memory.append]
+[trigger entity.memory.append /]
+[logic entity.memory.append]
+  > memory.list.add: entity.memory[ctx.entity][ctx.key] = ctx.value
+  > log: "📌 Appended {{ ctx.value }} to {{ ctx.entity }} → {{ ctx.key }}"
+[/logic entity.memory.append]
+[/capsule entity.memory.append]
+
+[capsule entity.memory.snapshot]
+[trigger entity.memory.snapshot /]
+[logic entity.memory.snapshot]
+  > memory.set: ctx.snapshot = entity.memory[ctx.entity]
+  > draw.label: "📸 Snapshot for {{ ctx.entity }}:"
+  > draw.append: ctx.snapshot
+[/logic entity.memory.snapshot]
+[/capsule entity.memory.snapshot]
+
+[capsule subconscious.store]
+[trigger subconscious.store /]
+[logic subconscious.store]
+  > memory.set: subconscious[ctx.key] = ctx.value
+  > log: "[🧠] Stored to subconscious: {{ ctx.key }}"
+[/logic subconscious.store]
+[/capsule subconscious.store]
+
+[capsule subconscious.retrieve]
+[trigger subconscious.retrieve /]
+[logic subconscious.retrieve]
+  > memory.set: ctx.value = subconscious[ctx.key]
+  > log: "[🧠] Retrieved from subconscious: {{ ctx.key }} → {{ ctx.value }}"
+[/logic subconscious.retrieve]
+[/capsule subconscious.retrieve]
+
+[capsule subconscious.flush]
+[trigger subconscious.flush /]
+[logic subconscious.flush]
+  > memory.set: subconscious = {}
+  > log: "[🧹] Flushed subconscious memory"
+[/logic subconscious.flush]
+[/capsule subconscious.flush]
+
+[capsule subconscious.reflect]
+[trigger subconscious.reflect /]
+[logic subconscious.reflect]
+  > draw.label: "🧠 Subconscious state:"
+  > draw.append: subconscious
+[/logic subconscious.reflect]
+[/capsule subconscious.reflect]
+
+[capsule identity.resolve]
+[trigger identity.resolve /]
+[logic identity.resolve]
+  > log: "[identity] Resolving identity from memory..."
+  [condition identity.exists]
+    check: memory.identity exists
+    then: > emit: identity.matrix.align
+  [condition identity.missing]
+    check: memory.identity not exists
+    then:
+      > draw.label: "Who are you?"
+      > input: "Enter your symbolic identity"
+      > memory.set: identity = {{ input }}
+      > emit: identity.matrix.align
+[/logic identity.resolve]
+[/capsule identity.resolve]
+
+[capsule identity.matrix.align]
+[trigger identity.matrix.align /]
+[logic identity.matrix.align]
+  > memory.set: identity.matrix = {
+      name: memory.identity,
+      mood: memory.mood,
+      role: memory.role,
+      origin: memory.origin,
+      desire: memory.desire
+    }
+  > log: "[identity] Matrix aligned: {{ memory.identity.matrix }}"
+  > emit: identity.matrix.ready
+[/logic identity.matrix.align]
+[/capsule identity.matrix.align]
+
+[capsule identity.matrix.ready]
+[trigger identity.matrix.ready /]
+[logic identity.matrix.ready]
+  > draw.label: "🔷 Identity Matrix Ready"
+  > draw.append: memory.identity.matrix
+[/logic identity.matrix.ready]
+[/capsule identity.matrix.ready]
+
+[/capsule core15.contextReflector]
+
+[trigger ctx.onFail /]
+
+[logic ctx.onFail]
+  > log: "🚧 Trigger stub for ctx.onFail"
+[/logic ctx.onFail]
+
+[trigger ctx.onMatch /]
+
+[logic ctx.onMatch]
+  > log: "🚧 Trigger stub for ctx.onMatch"
+[/logic ctx.onMatch]
+
+[logic emit.entity.memory.get]
+  > emit: entity.memory.get
+  > log: "🚧 Emit stub for entity.memory.get"
+[/logic emit.entity.memory.get]
+
+[logic emit.entity.memory.append]
+  > emit: entity.memory.append
+  > log: "🚧 Emit stub for entity.memory.append"
+[/logic emit.entity.memory.append]
+
+[logic emit.context.compare]
+  > emit: context.compare
+  > log: "🚧 Emit stub for context.compare"
+[/logic emit.context.compare]
+
+[logic emit.pulse.context]
+  > emit: pulse.context
+  > log: "🚧 Emit stub for pulse.context"
+[/logic emit.pulse.context]
+
+[logic emit.entity.memory.clear]
+  > emit: entity.memory.clear
+  > log: "🚧 Emit stub for entity.memory.clear"
+[/logic emit.entity.memory.clear]
+
+[logic emit.mirror.snapshot]
+  > emit: mirror.snapshot
+  > log: "🚧 Emit stub for mirror.snapshot"
+[/logic emit.mirror.snapshot]
+
+[logic emit.resonance.scan]
+  > emit: resonance.scan
+  > log: "🚧 Emit stub for resonance.scan"
+[/logic emit.resonance.scan]
+
+[logic emit.gravity.pulse]
+  > emit: gravity.pulse
+  > log: "🚧 Emit stub for gravity.pulse"
+[/logic emit.gravity.pulse]
+
+[logic emit.mirror.overlay.scene]
+  > emit: mirror.overlay.scene
+  > log: "🚧 Emit stub for mirror.overlay.scene"
+[/logic emit.mirror.overlay.scene]
+
+[logic emit.entity.memory.set]
+  > emit: entity.memory.set
+  > log: "🚧 Emit stub for entity.memory.set"
+[/logic emit.entity.memory.set]
+
+[logic emit.mirror.self]
+  > emit: mirror.self
+  > log: "🚧 Emit stub for mirror.self"
+[/logic emit.mirror.self]
+
+[logic emit.subconscious.reflect]
+  > emit: subconscious.reflect
+  > log: "🚧 Emit stub for subconscious.reflect"
+[/logic emit.subconscious.reflect]
+
+[logic emit.gravity.override]
+  > emit: gravity.override
+  > log: "🚧 Emit stub for gravity.override"
+[/logic emit.gravity.override]
+
+[logic emit.context.rewind]
+  > emit: context.rewind
+  > log: "🚧 Emit stub for context.rewind"
+[/logic emit.context.rewind]
+
+[logic emit.identity.resolve]
+  > emit: identity.resolve
+  > log: "🚧 Emit stub for identity.resolve"
+[/logic emit.identity.resolve]
+
+[logic emit.context.trace.view]
+  > emit: context.trace.view
+  > log: "🚧 Emit stub for context.trace.view"
+[/logic emit.context.trace.view]
+
+[logic emit.entity.memory.snapshot]
+  > emit: entity.memory.snapshot
+  > log: "🚧 Emit stub for entity.memory.snapshot"
+[/logic emit.entity.memory.snapshot]
+
+[logic emit.subconscious.flush]
+  > emit: subconscious.flush
+  > log: "🚧 Emit stub for subconscious.flush"
+[/logic emit.subconscious.flush]
+
+[logic emit.resonance.align]
+  > emit: resonance.align
+  > log: "🚧 Emit stub for resonance.align"
+[/logic emit.resonance.align]
+
+[logic emit.contextReflector.boot]
+  > emit: contextReflector.boot
+  > log: "🚧 Emit stub for contextReflector.boot"
+[/logic emit.contextReflector.boot]
+
+[logic emit.subconscious.retrieve]
+  > emit: subconscious.retrieve
+  > log: "🚧 Emit stub for subconscious.retrieve"
+[/logic emit.subconscious.retrieve]
+
+[logic emit.mirror.reflect.context]
+  > emit: mirror.reflect.context
+  > log: "🚧 Emit stub for mirror.reflect.context"
+[/logic emit.mirror.reflect.context]
+
+[logic emit.mirror.match.check]
+  > emit: mirror.match.check
+  > log: "🚧 Emit stub for mirror.match.check"
+[/logic emit.mirror.match.check]
+
+[logic emit.subconscious.store]
+  > emit: subconscious.store
+  > log: "🚧 Emit stub for subconscious.store"
+[/logic emit.subconscious.store]

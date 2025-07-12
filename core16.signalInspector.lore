@@ -1,0 +1,438 @@
+[capsule core17.signalInspector]
+
+[capsule signal.register]
+[trigger signal.register /]
+[logic signal.register]
+  > memory.set: signal.registry[ctx.signal] = {
+      origin: ctx.origin,
+      timestamp: now()
+    }
+  > log: "[signal] Registered '{{ ctx.signal }}' from {{ ctx.origin }}"
+[/logic signal.register]
+[/capsule signal.register]
+
+[capsule signal.trace]
+[trigger signal.trace /]
+[logic signal.trace]
+  > draw.label: "🔦 Signal Trace: {{ ctx.signal }}"
+  > draw.append: signal.registry[ctx.signal]
+[/logic signal.trace]
+[/capsule signal.trace]
+
+[capsule signal.scope.start]
+[trigger signal.scope.start /]
+[logic signal.scope.start]
+  > memory.set: signal.scope.active = true
+  > memory.set: signal.scope.history = []
+  > log: "[scope] Signal scope started"
+[/logic signal.scope.start]
+[/capsule signal.scope.start]
+
+[capsule signal.scope.capture]
+[trigger signal.scope.capture /]
+[logic signal.scope.capture]
+  > memory.list.add: signal.scope.history, ctx.signal
+  > log: "[scope] Captured signal: {{ ctx.signal }}"
+[/logic signal.scope.capture]
+[/capsule signal.scope.capture]
+
+[capsule signal.scope.end]
+[trigger signal.scope.end /]
+[logic signal.scope.end]
+  > log: "[scope] Signal scope ended"
+  > draw.label: "🧾 Scoped Signals:"
+  > draw.append: signal.scope.history
+  > memory.set: signal.scope.active = false
+[/logic signal.scope.end]
+[/capsule signal.scope.end]
+
+[capsule signal.scope.debug]
+[trigger signal.scope.debug /]
+[logic signal.scope.debug]
+  > draw.label: "📜 Signal Registry"
+  > draw.append: signal.registry
+[/logic signal.scope.debug]
+[/capsule signal.scope.debug]
+
+[capsule signal.reflect]
+[trigger signal.reflect /]
+[logic signal.reflect]
+  > memory.set signal.info.name = ctx.signal
+  > memory.set signal.info.origin = ctx.origin or ctx.sender
+  > memory.set signal.info.payload = ctx.data or ctx.payload
+  > draw.label: "🔦 Signal: {{ signal.info.name }}"
+  > draw.label: "📡 Origin: {{ signal.info.origin }}"
+  > draw.label: "📦 Payload: {{ signal.info.payload }}"
+[/logic signal.reflect]
+[/capsule signal.reflect]
+
+[capsule signal.log]
+[trigger signal.log /]
+[logic signal.log]
+  > memory.set: signal.last = ctx.signal
+  > memory.list.add: signal.log = ctx.signal
+  > emit: signal.received
+[/logic signal.log]
+[/capsule signal.log]
+
+[capsule signal.rewrite]
+[trigger signal.rewrite /]
+[logic signal.rewrite]
+  > memory.set ctx.signal = ctx.newSignal
+  > emit: {{ ctx.newSignal }}
+[/logic signal.rewrite]
+[/capsule signal.rewrite]
+
+[capsule signal.pause]
+[trigger signal.pause /]
+[logic signal.pause]
+  > memory.set pausedSignals[ctx.signal] = ctx.payload
+  > draw.label: "⏸ Paused signal {{ ctx.signal }}"
+[/logic signal.pause]
+[/capsule signal.pause]
+
+[capsule signal.resume]
+[trigger signal.resume /]
+[logic signal.resume]
+  > emit: {{ ctx.signal }} ctx = pausedSignals[ctx.signal]
+  > memory.clear pausedSignals[ctx.signal]
+  > draw.label: "▶️ Resumed signal {{ ctx.signal }}"
+[/logic signal.resume]
+[/capsule signal.resume]
+
+[capsule reason.inferCause]
+[trigger reason.inferCause /]
+[logic reason.inferCause]
+  > memory.set reasoning.cause = trace.signal.previous
+  > draw.label: "🧩 Prior signal: {{ reasoning.cause }} may have led here."
+[/logic reason.inferCause]
+[/capsule reason.inferCause]
+
+[capsule reason.why]
+[trigger reason.why /]
+[logic reason.why]
+  - if: ctx.query in memory
+    > draw.label: "🧠 '{{ ctx.query }}' exists because: {{ memory.origin[ctx.query] }}"
+  - else:
+    > draw.label: "❓ No direct origin found for '{{ ctx.query }}'"
+[/logic reason.why]
+[/capsule reason.why]
+
+[capsule reason.breadcrumbs]
+[trigger reason.breadcrumbs /]
+[logic reason.breadcrumbs]
+  > draw.label: "🔗 Signal trail:"
+  > draw.append: trace.signal.all
+[/logic reason.breadcrumbs]
+[/capsule reason.breadcrumbs]
+
+[capsule reason.explainCondition]
+[trigger reason.explainCondition /]
+[logic reason.explainCondition]
+  > memory.set cond = ctx.condition
+  > draw.label: "🔍 Evaluating condition: {{ cond }}"
+  - if: memory[cond.key] == cond.value
+    > draw.label: "✅ True because memory.{{ cond.key }} == {{ cond.value }}"
+  - else:
+    > draw.label: "❌ False. memory.{{ cond.key }} = {{ memory[cond.key] }}"
+[/logic reason.explainCondition]
+[/capsule reason.explainCondition]
+
+[capsule reason.suggestNext]
+[trigger reason.suggestNext /]
+[logic reason.suggestNext]
+  > draw.label: "🔮 Next likely signals:"
+  > draw.append: [
+      "grammar.evolve",
+      "reflect.trace.signal",
+      "echoMesh.observe",
+      "intent.shift"
+  ]
+[/logic reason.suggestNext]
+[/capsule reason.suggestNext]
+
+[capsule trace.record]
+[trigger trace.record /]
+[logic trace.record]
+  > memory.set: trace.last = {
+      time: now(),
+      signal: ctx.signal,
+      payload: ctx
+    }
+[/logic trace.record]
+[/capsule trace.record]
+
+[capsule trace.recall]
+[trigger trace.recall /]
+[logic trace.recall]
+  > draw.label: "⏪ Last trace: {{ trace.last.signal }} at {{ trace.last.time }}"
+  > draw.append: trace.last.payload
+[/logic trace.recall]
+[/capsule trace.recall]
+
+[capsule witness.observe]
+[trigger witness.observe /]
+[logic witness.observe]
+  > memory.set: witness.entry = {
+      time: now(),
+      context: ctx,
+      mood: memory.mood.current,
+      action: ctx.signal
+    }
+  > memory.list.add: witness.log with: witness.entry
+  > log: "[👁️] Witness recorded: {{ ctx.signal }}"
+[/logic witness.observe]
+[/capsule witness.observe]
+
+[capsule witness.review]
+[trigger witness.review /]
+[logic witness.review]
+  > draw.label: "📜 Witness Log:"
+  > draw.append: witness.log
+[/logic witness.review]
+[/capsule witness.review]
+
+[capsule witness.clear]
+[trigger witness.clear /]
+[logic witness.clear]
+  > memory.set: witness.log = []
+  > draw.label: "🧹 Witness log cleared."
+[/logic witness.clear]
+[/capsule witness.clear]
+
+[capsule critical.signal.dispatch]
+[trigger critical.signal.dispatch /]
+[logic critical.signal.dispatch]
+  > log: "[🚨] CRITICAL SIGNAL RECEIVED: {{ ctx.message }}"
+  > emit: ctx.route if ctx.route exists
+  > draw.label: "⚠️ CRITICAL EVENT: {{ ctx.message }}"
+[/logic critical.signal.dispatch]
+[/capsule critical.signal.dispatch]
+
+[capsule critical.signal.alert]
+[trigger critical.signal.alert /]
+[logic critical.signal.alert]
+  > draw.overlay: "⚠️ ALERT: {{ ctx.info }}"
+  > emit: log.critical ctx.info
+[/logic critical.signal.alert]
+[/capsule critical.signal.alert]
+
+[capsule signalInspector.boot]
+[trigger signalInspector.init /]
+[logic signalInspector.boot]
+  > log: "🧪 [signalInspector] Initializing signal inspector layer"
+  > emit: signalInspector.observe.start
+[/logic signalInspector.boot]
+[/capsule signalInspector.boot]
+
+[capsule signalInspector.observe]
+[trigger signalInspector.observe.start /]
+[memory signalInspector.history /]
+[memory signalInspector.lastSignal /]
+[memory signalInspector.watchList /]
+[logic signalInspector.observe]
+  > log: "🔍 [signalInspector] Watching incoming signal flow"
+  > memory.set: signalInspector.history = []
+  > memory.set: signalInspector.watchList = default.watchList()
+  > emit: signalInspector.listen
+[/logic signalInspector.observe]
+[/capsule signalInspector.observe]
+
+[capsule signalInspector.listen]
+[trigger signal.received /]
+[logic signalInspector.listen]
+  > memory.set: signalInspector.lastSignal = ctx.signal
+  > memory.append: signalInspector.history = ctx.signal
+  [condition signal.watched]
+    check: ctx.signal.name in signalInspector.watchList
+    then: > emit: signalInspector.alert
+[/logic signalInspector.listen]
+[/capsule signalInspector.listen]
+
+[capsule signalInspector.alert]
+[trigger signalInspector.alert /]
+[logic signalInspector.alert]
+  > log: "⚠️ [signalInspector] Watched signal detected: {{ signalInspector.lastSignal }}"
+  > draw.label: "🚨 Watched Signal: {{ signalInspector.lastSignal }}"
+[/logic signalInspector.alert]
+[/capsule signalInspector.alert]
+
+[capsule signalInspector.controls]
+[trigger signalInspector.modify.watchList /]
+[logic signalInspector.controls]
+  [condition watchList.add]
+    check: ctx.action == "add"
+    then:
+      > memory.append: signalInspector.watchList = ctx.signalName
+      > log: "✅ [signalInspector] Added to watchlist: {{ ctx.signalName }}"
+  [condition watchList.remove]
+    check: ctx.action == "remove"
+    then:
+      > memory.remove: signalInspector.watchList = ctx.signalName
+      > log: "🗑 [signalInspector] Removed from watchlist: {{ ctx.signalName }}"
+  [condition watchList.clear]
+    check: ctx.action == "clear"
+    then:
+      > memory.set: signalInspector.watchList = []
+      > log: "🧼 [signalInspector] Cleared watchlist"
+[/logic signalInspector.controls]
+[/capsule signalInspector.controls]
+
+[capsule signalInspector.ui]
+[trigger signalInspector.view /]
+[logic signalInspector.ui]
+  > draw.label: "🧪 Signal Inspector Dashboard"
+  > draw.list: label = "📜 History" source = signalInspector.history
+  > draw.value: label = "Last Signal" value = signalInspector.lastSignal
+  > draw.list: label = "Watchlist" source = signalInspector.watchList
+[/logic signalInspector.ui]
+[/capsule signalInspector.ui]
+
+[/capsule core17.signalInspector]
+[trigger log.critical /]
+
+[logic log.critical]
+  > log: "🚧 Trigger stub for log.critical"
+[/logic log.critical]
+
+[trigger ctx.route /]
+
+[logic ctx.route]
+  > log: "🚧 Trigger stub for ctx.route"
+[/logic ctx.route]
+
+[trigger signalInspector.listen /]
+
+[logic signalInspector.listen]
+  > log: "🚧 Trigger stub for signalInspector.listen"
+[/logic signalInspector.listen]
+
+[logic emit.signalInspector.modify.watchList]
+  > emit: signalInspector.modify.watchList
+  > log: "🚧 Emit stub for signalInspector.modify.watchList"
+[/logic emit.signalInspector.modify.watchList]
+
+[logic emit.signal.scope.capture]
+  > emit: signal.scope.capture
+  > log: "🚧 Emit stub for signal.scope.capture"
+[/logic emit.signal.scope.capture]
+
+[logic emit.reason.breadcrumbs]
+  > emit: reason.breadcrumbs
+  > log: "🚧 Emit stub for reason.breadcrumbs"
+[/logic emit.reason.breadcrumbs]
+
+[logic emit.signal.log]
+  > emit: signal.log
+  > log: "🚧 Emit stub for signal.log"
+[/logic emit.signal.log]
+
+[logic emit.signal.register]
+  > emit: signal.register
+  > log: "🚧 Emit stub for signal.register"
+[/logic emit.signal.register]
+
+[logic emit.critical.signal.alert]
+  > emit: critical.signal.alert
+  > log: "🚧 Emit stub for critical.signal.alert"
+[/logic emit.critical.signal.alert]
+
+[logic emit.signal.trace]
+  > emit: signal.trace
+  > log: "🚧 Emit stub for signal.trace"
+[/logic emit.signal.trace]
+
+[logic emit.signalInspector.view]
+  > emit: signalInspector.view
+  > log: "🚧 Emit stub for signalInspector.view"
+[/logic emit.signalInspector.view]
+
+[logic emit.witness.observe]
+  > emit: witness.observe
+  > log: "🚧 Emit stub for witness.observe"
+[/logic emit.witness.observe]
+
+[logic emit.trace.recall]
+  > emit: trace.recall
+  > log: "🚧 Emit stub for trace.recall"
+[/logic emit.trace.recall]
+
+[logic emit.reason.why]
+  > emit: reason.why
+  > log: "🚧 Emit stub for reason.why"
+[/logic emit.reason.why]
+
+[logic emit.reason.suggestNext]
+  > emit: reason.suggestNext
+  > log: "🚧 Emit stub for reason.suggestNext"
+[/logic emit.reason.suggestNext]
+
+[logic emit.reason.explainCondition]
+  > emit: reason.explainCondition
+  > log: "🚧 Emit stub for reason.explainCondition"
+[/logic emit.reason.explainCondition]
+
+[logic emit.reason.inferCause]
+  > emit: reason.inferCause
+  > log: "🚧 Emit stub for reason.inferCause"
+[/logic emit.reason.inferCause]
+
+[logic emit.witness.review]
+  > emit: witness.review
+  > log: "🚧 Emit stub for witness.review"
+[/logic emit.witness.review]
+
+[logic emit.critical.signal.dispatch]
+  > emit: critical.signal.dispatch
+  > log: "🚧 Emit stub for critical.signal.dispatch"
+[/logic emit.critical.signal.dispatch]
+
+[logic emit.signal.scope.start]
+  > emit: signal.scope.start
+  > log: "🚧 Emit stub for signal.scope.start"
+[/logic emit.signal.scope.start]
+
+[logic emit.signal.pause]
+  > emit: signal.pause
+  > log: "🚧 Emit stub for signal.pause"
+[/logic emit.signal.pause]
+
+[logic emit.trace.record]
+  > emit: trace.record
+  > log: "🚧 Emit stub for trace.record"
+[/logic emit.trace.record]
+
+[logic emit.signal.rewrite]
+  > emit: signal.rewrite
+  > log: "🚧 Emit stub for signal.rewrite"
+[/logic emit.signal.rewrite]
+
+[logic emit.signal.reflect]
+  > emit: signal.reflect
+  > log: "🚧 Emit stub for signal.reflect"
+[/logic emit.signal.reflect]
+
+[logic emit.signalInspector.init]
+  > emit: signalInspector.init
+  > log: "🚧 Emit stub for signalInspector.init"
+[/logic emit.signalInspector.init]
+
+[logic emit.signal.scope.end]
+  > emit: signal.scope.end
+  > log: "🚧 Emit stub for signal.scope.end"
+[/logic emit.signal.scope.end]
+
+[logic emit.signal.resume]
+  > emit: signal.resume
+  > log: "🚧 Emit stub for signal.resume"
+[/logic emit.signal.resume]
+
+[logic emit.signal.scope.debug]
+  > emit: signal.scope.debug
+  > log: "🚧 Emit stub for signal.scope.debug"
+[/logic emit.signal.scope.debug]
+
+[logic emit.witness.clear]
+  > emit: witness.clear
+  > log: "🚧 Emit stub for witness.clear"
+[/logic emit.witness.clear]

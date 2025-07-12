@@ -1,0 +1,233 @@
+[capsule core21.navigationLayer]
+
+[capsule navigation.init]
+
+[trigger navigation.init /]
+
+[logic navigation.init]
+  > memory.set: location.current = null
+  > memory.set: location.history = []
+  > memory.set: map = {}
+  > memory.set: map.links = {}
+  > draw.label: "🧭 Navigation system initialized"
+[/logic navigation.init]
+
+[/capsule navigation.init]
+
+[capsule map.define]
+
+[trigger map.define /]
+
+[logic map.define]
+  > memory.set: map.{{ ctx.name }} = ctx.structure
+  > draw.label: "🗺️ Map '{{ ctx.name }}' defined"
+[/logic map.define]
+
+[/capsule map.define]
+
+[capsule map.render]
+
+[trigger map.render /]
+
+[logic map.render]
+  > draw.label: "🗺️ Rendering Map: {{ ctx.name }}"
+  > draw.append: map.{{ ctx.name }}
+[/logic map.render]
+
+[/capsule map.render]
+
+[capsule map.validate]
+
+[trigger map.validate /]
+
+[logic map.validate]
+  [condition is.valid]
+    check: ctx.name in keys(map)
+    then: > draw.label: "✅ Map '{{ ctx.name }}' exists and is valid"
+    else: > draw.label: "⚠️ Map '{{ ctx.name }}' not found"
+  [/condition is.valid]
+[/logic map.validate]
+
+[/capsule map.validate]
+
+[capsule map.link]
+
+[trigger map.link /]
+
+[logic map.link]
+  > memory.set: map.links.{{ ctx.from }}.{{ ctx.to }} = true
+  > draw.label: "🔗 Linked {{ ctx.from }} → {{ ctx.to }}"
+[/logic map.link]
+
+[/capsule map.link]
+
+[capsule map.describe]
+
+[trigger map.describe /]
+
+[logic map.describe]
+  > draw.label: "📝 Location: {{ location.current }}"
+  > draw.append: map.{{ location.current }}
+[/logic map.describe]
+
+[/capsule map.describe]
+
+[capsule map.visualize]
+
+[trigger map.visualize /]
+
+[logic map.visualize]
+  > draw.label: "🧭 Visualizing Map Topology"
+  > draw.json: map.links
+[/logic map.visualize]
+
+[/capsule map.visualize]
+
+[capsule move.to]
+
+[trigger move.to /]
+
+[logic move.to]
+  > memory.set: location.current = ctx.target
+  > memory.append: location.history = ctx.target
+  > draw.label: "🚶 You move to: {{ ctx.target }}"
+  > emit: arrive.{{ ctx.target }}
+[/logic move.to]
+
+[/capsule move.to]
+
+[capsule move.random]
+
+[trigger move.random /]
+
+[logic move.random]
+  [condition has.links]
+    check: map.links[location.current] exists and keys(map.links[location.current]).length > 0
+    then:
+      > memory.set: options = keys(map.links[location.current])
+      > memory.set: randomTarget = choose.random(options)
+      > emit: move.to {{ memory.randomTarget }}
+    else:
+      > draw.label: "🛑 No available links from current location"
+  [/condition has.links]
+[/logic move.random]
+
+[/capsule move.random]
+
+[capsule location.track]
+
+[trigger move.to /]
+
+[logic location.track]
+  > memory.append: location.history = ctx.target
+[/logic location.track]
+
+[/capsule location.track]
+
+[capsule location.history.view]
+
+[trigger location.history.view /]
+
+[logic location.history.view]
+  > draw.label: "🧾 Movement History"
+  > draw.list: source = location.history
+[/logic location.history.view]
+
+[/capsule location.history.view]
+
+[capsule arrive.default]
+
+[trigger arrive.* /]
+
+[logic arrive.default]
+  > draw.label: "📍 You’ve arrived at: {{ ctx.signal.split('.')[1] }}"
+[/logic arrive.default]
+
+[/capsule arrive.default]
+
+[capsule arrive.destination]
+
+[trigger arrive. /]
+
+[logic arrive.destination]
+  > log: "📍 Arrived at: {{ ctx.location }}"
+  > memory.set: navigation.position = ctx.location
+[/logic arrive.destination]
+
+[/capsule arrive.destination]
+
+[capsule subsymbolic.scan]
+
+[trigger scan.subsymbolic /]
+
+[logic subsymbolic.scan]
+  > memory.set: subsymbolic.map = extract.subsymbols(ctx.payload)
+  > log: "[🧭] Subsymbolic patterns extracted"
+[/logic subsymbolic.scan]
+
+[/capsule subsymbolic.scan]
+
+[capsule subsymbolic.route]
+
+[trigger subsymbolic.route /]
+
+[logic subsymbolic.route]
+  > emit: signal.{{ subsymbolic.map[ctx.key] || "unknown" }}
+[/logic subsymbolic.route]
+
+[/capsule subsymbolic.route]
+[/capsule core21.navigationLayer]
+[logic emit.move.random]
+  > emit: move.random
+  > log: "🚧 Emit stub for move.random"
+[/logic emit.move.random]
+
+[logic emit.map.describe]
+  > emit: map.describe
+  > log: "🚧 Emit stub for map.describe"
+[/logic emit.map.describe]
+
+[logic emit.navigation.init]
+  > emit: navigation.init
+  > log: "🚧 Emit stub for navigation.init"
+[/logic emit.navigation.init]
+
+[logic emit.map.link]
+  > emit: map.link
+  > log: "🚧 Emit stub for map.link"
+[/logic emit.map.link]
+
+[logic emit.map.define]
+  > emit: map.define
+  > log: "🚧 Emit stub for map.define"
+[/logic emit.map.define]
+
+[logic emit.location.history.view]
+  > emit: location.history.view
+  > log: "🚧 Emit stub for location.history.view"
+[/logic emit.location.history.view]
+
+[logic emit.map.validate]
+  > emit: map.validate
+  > log: "🚧 Emit stub for map.validate"
+[/logic emit.map.validate]
+
+[logic emit.scan.subsymbolic]
+  > emit: scan.subsymbolic
+  > log: "🚧 Emit stub for scan.subsymbolic"
+[/logic emit.scan.subsymbolic]
+
+[logic emit.map.render]
+  > emit: map.render
+  > log: "🚧 Emit stub for map.render"
+[/logic emit.map.render]
+
+[logic emit.subsymbolic.route]
+  > emit: subsymbolic.route
+  > log: "🚧 Emit stub for subsymbolic.route"
+[/logic emit.subsymbolic.route]
+
+[logic emit.map.visualize]
+  > emit: map.visualize
+  > log: "🚧 Emit stub for map.visualize"
+[/logic emit.map.visualize]

@@ -1,0 +1,418 @@
+[capsule core24.symbolicCognition]
+
+[capsule learn.pattern]
+
+[trigger learn.pattern /]
+
+[logic learn.pattern]
+  > memory.append learn.traces += {
+      input: ctx.input,
+      memory: memory.snapshot(),
+      mood: memory.get("mood"),
+      signal: ctx.signal,
+      time: now()
+    }
+  > memory.set: learn.traces[-1].hash = hash(learn.traces[-1].memory)
+  > memory.set: learn.traces[-1].version = now()
+  > draw.label: "📚 Learned from input: {{ ctx.input }}"
+  > emit: fork.recursive  # Patch to resolve orphan trigger
+[/logic learn.pattern]
+
+[/capsule learn.pattern]
+
+
+[capsule train.memory]
+
+[trigger train.memory /]
+
+[logic train.memory]
+  - foreach: learn.traces
+    do:
+      > memory.scope
+      > memory.merge learn.current = item.memory
+      > emit: {{ item.signal }}
+      > memory.clear
+[/logic train.memory]
+
+[/capsule train.memory]
+
+
+[capsule predict.signal]
+
+[trigger predict.signal /]
+
+[logic predict.signal]
+  > memory.set lastInput = ctx.input
+  > memory.set prediction = match.signalPattern(ctx.input, learn.traces)
+  > memory.set prediction.confidence = signalScores[memory.prediction]
+  > emit: {{ memory.prediction }}
+  > draw.label: "🔮 Prediction: {{ memory.prediction }} (Confidence: {{ prediction.confidence }})"
+[/logic predict.signal]
+
+[/capsule predict.signal]
+
+
+[capsule match.signalPattern]
+
+[trigger match.signalPattern /]
+
+[logic match.signalPattern]
+  > memory.set signalScores = {}
+  - foreach: learn.traces
+    do:
+      - set: score = similarity(ctx.input, item.input)
+      > memory.set signalScores[item.signal] = score
+  > memory.set prediction = max(signalScores by value)
+[/logic match.signalPattern]
+
+[/capsule match.signalPattern]
+
+
+[capsule learn.reset]
+
+[trigger learn.reset /]
+
+[logic learn.reset]
+  > memory.clear learn.traces
+  > draw.label: "🧼 Learning reset"
+[/logic learn.reset]
+
+[/capsule learn.reset]
+
+
+[capsule trace.playback]
+
+[trigger trace.playback /]
+
+[logic trace.playback]
+  - foreach: learn.traces
+    do:
+      > memory.merge: playback = item.memory
+      > emit: {{ item.signal }}
+[/logic trace.playback]
+
+[/capsule trace.playback]
+
+
+[capsule symbol.react]
+
+[trigger symbol.react /]
+
+[logic symbol.react]
+  condition: ctx.symbol in reactive.map
+    do: > emit: {{ reactive.map[ctx.symbol] }}
+  condition: ctx.symbol not in reactive.map
+    do: > log: "[🧿] No reaction mapped for '{{ ctx.symbol }}'"
+[/logic symbol.react]
+
+[/capsule symbol.react]
+
+
+[capsule symbol.bindReaction]
+
+[trigger symbol.bind /]
+
+[logic symbol.bindReaction]
+  > memory.map.set: reactive.map.{{ ctx.symbol }} = ctx.response
+  > memory.list.add: reactive.history += {
+      symbol: ctx.symbol,
+      response: ctx.response,
+      time: now()
+    }
+  > log: "[🧿] Bound symbol '{{ ctx.symbol }}' to response '{{ ctx.response }}'"
+[/logic symbol.bindReaction]
+
+[/capsule symbol.bindReaction]
+
+
+[capsule dream.initiate]
+
+[trigger dream.begin /]
+
+[logic dream.initiate]
+  > memory.set: dream.active = true
+  > draw.label: "🌙 Entering symbolic dream loop..."
+  > emit: dream.tick
+[/logic dream.initiate]
+
+[/capsule dream.initiate]
+
+
+[capsule dream.tick]
+
+[trigger dream.tick /]
+
+[logic dream.tick]
+  condition: dream.active == true
+    do:
+      > emit: dream.sequence
+      > wait: 3s
+      > emit: dream.tick
+[/logic dream.tick]
+
+[/capsule dream.tick]
+
+
+[capsule dream.sequence]
+
+[trigger dream.sequence /]
+
+[logic dream.sequence]
+  > draw.label: "💭 Dreaming: {{ memory.dream.log | random }}"
+[/logic dream.sequence]
+
+[/capsule dream.sequence]
+
+
+[capsule dream.inject]
+
+[trigger dream.inject /]
+
+[logic dream.inject]
+  > memory.list.add: memory.dream.log, ctx.entry
+  > draw.label: "🌌 Injected into dream: {{ ctx.entry }}"
+[/logic dream.inject]
+
+[/capsule dream.inject]
+
+
+[capsule dream.exit]
+
+[trigger dream.end /]
+
+[logic dream.exit]
+  > memory.set: dream.active = false
+  > draw.label: "🌅 Waking up..."
+[/logic dream.exit]
+
+[/capsule dream.exit]
+
+
+[capsule fork.recursive]
+
+[trigger fork.recursive /]
+
+[logic fork.recursive]
+  > log: "[🔁] Forking recursive call: {{ ctx.target }}"
+  > memory.set: ctx.counter = ctx.counter or 0
+  condition: ctx.counter < (ctx.max or 10)
+    do:
+      > emit: ctx.target with: { counter: ctx.counter + 1, max: ctx.max }
+[/logic fork.recursive]
+
+[/capsule fork.recursive]
+
+
+[capsule fork.until.success]
+
+[trigger fork.until.success /]
+
+[logic fork.until.success]
+  condition: ctx.attempts >= (ctx.max or 5)
+    do:
+      > emit: ctx.onFail
+  condition: not ctx.success
+    do:
+      > emit: ctx.target with: { attempts: ctx.attempts + 1, onFail: ctx.onFail }
+[/logic fork.until.success]
+
+[/capsule fork.until.success]
+
+
+[capsule fork.recursive.depth]
+
+[trigger fork.recursive.depth /]
+
+[logic fork.recursive.depth]
+  > log: "[🌊] Depth: {{ ctx.depth }}"
+  condition: ctx.depth < (ctx.limit or 5)
+    do:
+      > emit: fork.recursive.depth with: { depth: ctx.depth + 1, limit: ctx.limit }
+[/logic fork.recursive.depth]
+
+[/capsule fork.recursive.depth]
+
+
+[capsule fertility.plantSeed]
+
+[trigger fertility.seed /]
+
+[logic fertility.plantSeed]
+  > log: "🌱 Planting symbolic seed: {{ ctx.seedName }}"
+  > memory.set: seeds.{{ ctx.seedName }} = ctx.seedCapsule
+  > emit: fertility.germinate
+[/logic fertility.plantSeed]
+
+[/capsule fertility.plantSeed]
+
+
+[capsule fertility.germinate]
+
+[trigger fertility.germinate /]
+
+[logic fertility.germinate]
+  condition: ctx.seedName in memory.seeds
+    do:
+      > log: "🌿 Germinating seed: {{ ctx.seedName }}"
+      > eval: memory.seeds.{{ ctx.seedName }}
+      > emit: fertility.bloom
+  condition: ctx.seedName not in memory.seeds
+    do:
+      > draw.label: "❌ No seed found for: {{ ctx.seedName }}"
+[/logic fertility.germinate]
+
+[/capsule fertility.germinate]
+
+
+[capsule fertility.bloom]
+
+[trigger fertility.bloom /]
+
+[logic fertility.bloom]
+  > draw.label: "🌸 Symbolic bloom initialized"
+  > emit: memory.sync.full
+  > emit: grammar.introspect
+[/logic fertility.bloom]
+
+[/capsule fertility.bloom]
+
+
+[capsule fertility.seedBurst]
+
+[trigger fertility.seedBurst /]
+
+[logic fertility.seedBurst]
+  > log: "💥 Symbolic seed burst triggered"
+  - foreach: memory.seeds
+    do:
+      > emit: fertility.seed ctx.seedName = key, ctx.seedCapsule = value
+[/logic fertility.seedBurst]
+
+[/capsule fertility.seedBurst]
+
+
+[capsule fertility.mutate]
+
+[trigger fertility.mutate /]
+
+[logic fertility.mutate]
+  > log: "🌱 Mutating symbolic seed: {{ ctx.seedName }}"
+  > memory.set: seedMutation = mutate(memory.seeds.{{ ctx.seedName }})
+  > eval: seedMutation
+[/logic fertility.mutate]
+
+[/capsule fertility.mutate]
+
+
+[capsule fertility.pollinate]
+
+[trigger fertility.pollinate /]
+
+[logic fertility.pollinate]
+  > log: "🦋 Pollinating between: {{ ctx.parent1 }} & {{ ctx.parent2 }}"
+  > memory.set: seedHybrid = mix(ctx.parent1, ctx.parent2)
+  > emit: fertility.seed ctx.seedName = ctx.hybridName, ctx.seedCapsule = seedHybrid
+[/logic fertility.pollinate]
+
+[/capsule fertility.pollinate]
+
+
+[capsule fertility.propagate]
+
+[trigger fertility.propagate /]
+
+[logic fertility.propagate]
+  > log: "🌍 Propagating symbolic ecosystem"
+  > emit: fertility.seedBurst
+  > emit: stack.snapshot
+[/logic fertility.propagate]
+
+[/capsule fertility.propagate]
+
+[/capsule core24.symbolicCognition]
+[trigger stack.snapshot /]
+
+[logic stack.snapshot]
+  > log: "🚧 Trigger stub for stack.snapshot"
+[/logic stack.snapshot]
+
+[trigger ctx.target /]
+
+[logic ctx.target]
+  > log: "🚧 Trigger stub for ctx.target"
+[/logic ctx.target]
+
+[logic emit.symbol.bind]
+  > emit: symbol.bind
+  > log: "🚧 Emit stub for symbol.bind"
+[/logic emit.symbol.bind]
+
+[logic emit.fertility.propagate]
+  > emit: fertility.propagate
+  > log: "🚧 Emit stub for fertility.propagate"
+[/logic emit.fertility.propagate]
+
+[logic emit.dream.end]
+  > emit: dream.end
+  > log: "🚧 Emit stub for dream.end"
+[/logic emit.dream.end]
+
+[logic emit.dream.begin]
+  > emit: dream.begin
+  > log: "🚧 Emit stub for dream.begin"
+[/logic emit.dream.begin]
+
+[logic emit.fertility.mutate]
+  > emit: fertility.mutate
+  > log: "🚧 Emit stub for fertility.mutate"
+[/logic emit.fertility.mutate]
+
+[logic emit.predict.signal]
+  > emit: predict.signal
+  > log: "🚧 Emit stub for predict.signal"
+[/logic emit.predict.signal]
+
+[logic emit.dream.inject]
+  > emit: dream.inject
+  > log: "🚧 Emit stub for dream.inject"
+[/logic emit.dream.inject]
+
+[logic emit.train.memory]
+  > emit: train.memory
+  > log: "🚧 Emit stub for train.memory"
+[/logic emit.train.memory]
+
+[logic emit.fertility.pollinate]
+  > emit: fertility.pollinate
+  > log: "🚧 Emit stub for fertility.pollinate"
+[/logic emit.fertility.pollinate]
+
+[logic emit.trace.playback]
+  > emit: trace.playback
+  > log: "🚧 Emit stub for trace.playback"
+[/logic emit.trace.playback]
+
+[logic emit.learn.pattern]
+  > emit: learn.pattern
+  > log: "🚧 Emit stub for learn.pattern"
+[/logic emit.learn.pattern]
+
+[logic emit.learn.reset]
+  > emit: learn.reset
+  > log: "🚧 Emit stub for learn.reset"
+[/logic emit.learn.reset]
+
+[logic emit.fork.until.success]
+  > emit: fork.until.success
+  > log: "🚧 Emit stub for fork.until.success"
+[/logic emit.fork.until.success]
+
+[logic emit.symbol.react]
+  > emit: symbol.react
+  > log: "🚧 Emit stub for symbol.react"
+[/logic emit.symbol.react]
+
+[logic emit.match.signalPattern]
+  > emit: match.signalPattern
+  > log: "🚧 Emit stub for match.signalPattern"
+[/logic emit.match.signalPattern]

@@ -1,0 +1,152 @@
+[capsule core12.capsuleExecutor]
+
+[capsule capsuleExecutor.boot]
+
+[trigger boot.capsuleExecutor /]
+
+[logic capsuleExecutor.boot]
+  > log: "🎛️ [core12] Booting Capsule Executor..."
+  > emit: capsuleExecutor.init
+  > emit: capsuleExecutor.ready
+[/logic capsuleExecutor.boot]
+
+[/capsule capsuleExecutor.boot]
+
+[capsule capsuleExecutor.init]
+
+[trigger capsuleExecutor.init /]
+
+[memory capsuleExecutor.ready /]
+
+[logic capsuleExecutor.init]
+  > log: "🛠️ [executor] Initializing capsule executor runtime"
+  > memory.scope: capsuleExecutor
+  > memory.set: capsuleExecutor.ready = true
+[/logic capsuleExecutor.init]
+
+[/capsule capsuleExecutor.init]
+
+[capsule capsuleExecutor.route]
+
+[trigger capsuleExecutor.ready /]
+[trigger capsule.execute /]
+
+[logic capsuleExecutor.route]
+  [condition signal.ready]
+    check: signal == "capsuleExecutor.ready"
+    then: > log: "✅ [executor] Ready for execution"
+  [/condition signal.ready]
+
+  [condition signal.execute]
+    check: signal == "capsule.execute"
+    then: > emit: capsuleExecutor.execute
+  [/condition signal.execute]
+[/logic capsuleExecutor.route]
+
+[/capsule capsuleExecutor.route]
+
+[capsule capsuleExecutor.execute]
+
+[shareWith symbolicGrammarValidator /]
+[trigger capsuleExecutor.execute /]
+
+[logic capsuleExecutor.execute]
+  > log: "▶️ [executor] Starting capsule {{ ctx.capsule_id }}"
+
+  - for: ctx.nodes as node
+    do:
+      > set: ctx.node = node
+      > emit: validate.node
+
+      [condition tag.label]               check: node.tag == "label"                  then: > draw.label node        [/condition tag.label]
+      [condition tag.button]              check: node.tag == "button"                 then: > draw.button node       [/condition tag.button]
+      [condition tag.log]                 check: node.tag == "log"                    then: > log node.value         [/condition tag.log]
+      [condition tag.emit]                check: node.tag == "emit:"                  then: > emit.signal node.value[/condition tag.emit]
+      [condition tag.show]                check: node.tag == "show"                   then: > draw.show node.value  [/condition tag.show]
+      [condition tag.mood]                check: node.tag == "mood"                   then: > mood.set node.value   [/condition tag.mood]
+      [condition tag.scene]               check: node.tag == "scene"                  then: > draw.scene node       [/condition tag.scene]
+      [condition tag.scene.push]          check: node.tag == "scene.push"             then: > scene.push node.value [/condition tag.scene.push]
+      [condition tag.scene.pop]           check: node.tag == "scene.pop"              then: > scene.pop              [/condition tag.scene.pop]
+      [condition tag.scene.reset]         check: node.tag == "scene.reset"            then: > scene.reset            [/condition tag.scene.reset]
+      [condition tag.input]               check: node.tag == "input:"                 then: > input: node.value      [/condition tag.input]
+      [condition tag.memory.set]          check: node.tag == "memory.set"             then: > memory.set node.key = node.value [/condition tag.memory.set]
+      [condition tag.memory.toggle]       check: node.tag == "memory.toggle"          then: > memory.toggle node.key[/condition tag.memory.toggle]
+      [condition tag.eval]                check: node.tag == "eval:"                  then: > eval: node.value       [/condition tag.eval]
+      [condition tag.fork.loot]           check: node.tag == "fork.loot"              then: > fork.loot node.value   [/condition tag.fork.loot]
+      [condition tag.exit.context]        check: node.tag == "exit.context"           then: > exit.context           [/condition tag.exit.context]
+      [condition tag.try]                 check: node.tag == "try"                    then:
+                                              > eval: node.body
+                                              > catch: node.catch
+      [/condition tag.try]
+      [condition tag.match]               check: node.tag == "match"                  then: > match: node.value cases: node.cases [/condition tag.match]
+      [condition tag.goto]                check: node.tag == "goto"                   then: > goto: node.value       [/condition tag.goto]
+      [condition tag.condition]           check: node.tag == "condition"              then: > condition: node.value do: node.do [/condition tag.condition]
+      [condition tag.when]                check: node.tag == "when:"                  then: > emit.signal node.signal[/condition tag.when]
+      [condition tag.test.assert]         check: node.tag == "test.assert"            then: > test.assert: node      [/condition tag.test.assert]
+      [condition tag.draw.append]         check: node.tag == "draw.append"            then: > draw.append node       [/condition tag.draw.append]
+      [condition tag.draw.replace]        check: node.tag == "draw.replace"           then: > draw.replace node      [/condition tag.draw.replace]
+      [condition tag.draw.clear]          check: node.tag == "draw.clear"             then: > draw.clear             [/condition tag.draw.clear]
+      [condition tag.draw.overlay]        check: node.tag == "draw.overlay"           then: > draw.overlay node      [/condition tag.draw.overlay]
+      [condition tag.draw.modal]          check: node.tag == "draw.modal"             then: > draw.modal node        [/condition tag.draw.modal]
+      [condition tag.draw.form]           check: node.tag == "draw.form"              then: > draw.form node         [/condition tag.draw.form]
+      [condition tag.draw.tooltip]        check: node.tag == "draw.tooltip"           then: > draw.tooltip node      [/condition tag.draw.tooltip]
+      [condition tag.auth.require]        check: node.tag == "auth.require"           then: > auth.require node      [/condition tag.auth.require]
+      [condition tag.crypto.sign]         check: node.tag == "crypto.sign"            then: > crypto.sign node       [/condition tag.crypto.sign]
+      [condition tag.crypto.verify]       check: node.tag == "crypto.verify"          then: > crypto.verify node     [/condition tag.crypto.verify]
+      [condition tag.require.identity]    check: node.tag == "require.identity"       then: > require.identity node  [/condition tag.require.identity]
+      [condition tag.grammar.extend]      check: node.tag == "grammar.extend"         then: > grammar.extend node    [/condition tag.grammar.extend]
+      [condition tag.grammar.rewrite]     check: node.tag == "grammar.rewrite"        then: > grammar.rewrite node   [/condition tag.grammar.rewrite]
+      [condition tag.grammar.introspect]  check: node.tag == "grammar.introspect"     then: > grammar.introspect node[/condition tag.grammar.introspect]
+      [condition tag.grammar.version]     check: node.tag == "grammar.version"        then: > grammar.version node   [/condition tag.grammar.version]
+      [condition tag.identity.reflect]    check: node.tag == "identity.reflect"       then: > identity.reflect node  [/condition tag.identity.reflect]
+      [condition tag.intent.shift]        check: node.tag == "intent.shift"           then: > intent.shift node      [/condition tag.intent.shift]
+      [condition tag.trace.signal]        check: node.tag == "trace.signal"           then: > trace.signal node      [/condition tag.trace.signal]
+      [condition tag.stack.snapshot]      check: node.tag == "stack.snapshot"         then: > stack.snapshot node    [/condition tag.stack.snapshot]
+      [condition tag.quantum.branch]      check: node.tag == "quantum.branch"         then: > quantum.branch node    [/condition tag.quantum.branch]
+      [condition tag.quantum.observe]     check: node.tag == "quantum.observe.memory" then: > quantum.observe.memory node [/condition tag.quantum.observe]
+      [condition tag.capsule.reputation]  check: node.tag == "capsule.reputation"     then: > capsule.reputation node[/condition tag.capsule.reputation]
+      [condition tag.capsule.trust]       check: node.tag == "capsule.trust.map"      then: > capsule.trust.map node [/condition tag.capsule.trust]
+      [condition tag.auth.recursive]      check: node.tag == "auth.recursive.verify"  then: > auth.recursive.verify node [/condition tag.auth.recursive]
+      [condition tag.require.awakening]   check: node.tag == "require.awakening"      then: > require.awakening node [/condition tag.require.awakening]
+      [condition tag.test.signal.echo]    check: node.tag == "test.signal.echo"       then: > test.signal.echo node  [/condition tag.test.signal.echo]
+      [condition tag.test.context.shift]  check: node.tag == "test.context.shift"     then: > test.context.shift node[/condition tag.test.context.shift]
+      [condition tag.symbolic.execute]    check: node.tag == "symbolic.execute"       then: > emit: symbolic.execute [/condition tag.symbolic.execute]
+[/logic capsuleExecutor.execute]
+
+[/capsule capsuleExecutor.execute]
+
+[capsule capsuleExecutor.dispatch]
+
+[trigger symbolic.execute /]
+
+[logic capsuleExecutor.dispatch]
+  - log: "🧠 Executing capsule via symbolic VM"
+  > eval: capsule symbolicVM.executor
+[/logic capsuleExecutor.dispatch]
+
+[/capsule capsuleExecutor.dispatch]
+
+[capsule symbolicVM.executor]
+
+[trigger symbolic.execute /]
+
+[logic symbolicVM.executor]
+  > loop: ctx.instructions as step
+    do:
+      > set: ctx.currentStep = step
+      > emit: eval: capsule: {{step.capsule}}
+[/logic symbolicVM.executor]
+
+[/capsule symbolicVM.executor]
+
+[/capsule core12.capsuleExecutor]
+[trigger validate.node /]
+
+[logic validate.node]
+  > log: "🚧 Trigger stub for validate.node"
+[/logic validate.node]
+
+[logic emit.boot.capsuleExecutor]
+  > emit: boot.capsuleExecutor
+  > log: "🚧 Emit stub for boot.capsuleExecutor"
+[/logic emit.boot.capsuleExecutor]

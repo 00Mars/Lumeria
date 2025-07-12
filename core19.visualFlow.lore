@@ -1,0 +1,521 @@
+[capsule core19.visualFlow]
+
+[capsule visualFlow.boot]
+
+[trigger visualFlow.boot /]
+
+[logic visualFlow.boot]
+  > log: "🎨 [visualFlow] Initializing visual and holographic systems..."
+  > emit: visualFlow.init
+[/logic visualFlow.boot]
+
+[/capsule visualFlow.boot]
+
+[capsule visualFlow.init]
+
+[trigger visualFlow.init /]
+
+[memory render3d.scene /]
+[memory render3d.materials /]
+[memory render3d.transforms /]
+[memory holoframe.active /]
+[memory lens.current /]
+[memory shell.state /]
+
+[logic visualFlow.init]
+  > memory.set: render3d.scene = { objects: [], lights: [] }
+  > memory.set: render3d.materials = {}
+  > memory.set: render3d.transforms = {}
+  > memory.set: holoframe.active = null
+  > memory.set: lens.current = null
+  > memory.set: shell.state = "inactive"
+  > emit: visualFlow.ready
+[/logic visualFlow.init]
+
+[/capsule visualFlow.init]
+
+[capsule visualFlow.ready]
+
+[trigger visualFlow.ready /]
+
+[logic visualFlow.ready]
+  > draw.label: "✅ Visual system initialized"
+[/logic visualFlow.ready]
+
+[/capsule visualFlow.ready]
+
+[capsule timeline.define]
+
+[trigger timeline.define /]
+
+[logic timeline.define]
+  > memory.set: timeline.{{ ctx.name }}.frames = ctx.frames
+  > memory.set: timeline.{{ ctx.name }}.cursor = 0
+  > log: "🖼️ Defined timeline '{{ ctx.name }}' with {{ len(ctx.frames) }} frames"
+[/logic timeline.define]
+
+[/capsule timeline.define]
+
+[capsule timeline.play]
+
+[trigger timeline.play /]
+
+[logic timeline.play]
+  > memory.set: timeline.{{ ctx.name }}.playing = true
+  > emit: timeline.frame.next
+[/logic timeline.play]
+
+[/capsule timeline.play]
+
+[capsule timeline.pause]
+
+[trigger timeline.pause /]
+
+[logic timeline.pause]
+  > memory.set: timeline.{{ ctx.name }}.playing = false
+  > log: "⏸️ Paused timeline '{{ ctx.name }}'"
+[/logic timeline.pause]
+
+[/capsule timeline.pause]
+
+[capsule timeline.frame.next]
+
+[trigger timeline.frame.next /]
+
+[logic timeline.frame.next]
+  - if: timeline.{{ ctx.name }}.playing == true
+    - set: current = memory.get(timeline.{{ ctx.name }}.frames)[timeline.{{ ctx.name }}.cursor]
+    > draw.scene: {{ current }}
+    > memory.set: timeline.{{ ctx.name }}.cursor += 1
+
+    - if: timeline.{{ ctx.name }}.cursor < len(memory.get(timeline.{{ ctx.name }}.frames))
+      > schedule.every name = "timeline.{{ ctx.name }}" interval = 1 signal = timeline.frame.next
+    - else:
+      > memory.set: timeline.{{ ctx.name }}.playing = false
+      > log: "✅ Finished timeline '{{ ctx.name }}'"
+[/logic timeline.frame.next]
+
+[/capsule timeline.frame.next]
+
+[capsule timeline.reset]
+
+[trigger timeline.reset /]
+
+[logic timeline.reset]
+  > memory.set: timeline.{{ ctx.name }}.cursor = 0
+  > log: "🔄 Reset timeline '{{ ctx.name }}'"
+[/logic timeline.reset]
+
+[/capsule timeline.reset]
+
+[capsule timeline.inspect]
+
+[trigger timeline.inspect /]
+
+[logic timeline.inspect]
+  > draw.label: "📽️ Timeline '{{ ctx.name }}'"
+  > draw.append: memory.get(timeline.{{ ctx.name }}.frames)
+[/logic timeline.inspect]
+
+[/capsule timeline.inspect]
+
+[capsule draw.animate]
+
+[trigger draw.animate /]
+
+[logic draw.animate]
+  > log: "[🎞️] Animating target: {{ ctx.target }}"
+  > animate.start: target = ctx.target type = ctx.type duration = ctx.duration
+[/logic draw.animate]
+
+[/capsule draw.animate]
+
+[capsule draw.animateSequence]
+
+[trigger draw.animateSequence /]
+
+[logic draw.animateSequence]
+  - foreach: ctx.sequence
+    do:
+      > animate.start: target = item.target type = item.type duration = item.duration
+[/logic draw.animateSequence]
+
+[/capsule draw.animateSequence]
+
+[capsule draw.transition]
+
+[trigger draw.transition /]
+
+[logic draw.transition]
+  > log: "[🔁] Transitioning scene"
+  > animate.transition: from = ctx.from to = ctx.to style = ctx.style duration = ctx.duration
+[/logic draw.transition]
+
+[/capsule draw.transition]
+
+[capsule draw.motion]
+
+[trigger draw.motion /]
+
+[logic draw.motion]
+  > log: "[🏃] Moving element '{{ ctx.id }}' to ({{ ctx.x }}, {{ ctx.y }})"
+  > animate.move: id = ctx.id x = ctx.x y = ctx.y
+[/logic draw.motion]
+
+[/capsule draw.motion]
+
+[capsule draw.blink]
+
+[trigger draw.blink /]
+
+[logic draw.blink]
+  > animate.blink: target = ctx.target interval = ctx.interval
+[/logic draw.blink]
+
+[/capsule draw.blink]
+
+[capsule draw.shake]
+
+[trigger draw.shake /]
+
+[logic draw.shake]
+  > animate.shake: target = ctx.target intensity = ctx.intensity duration = ctx.duration
+[/logic draw.shake]
+
+[/capsule draw.shake]
+
+[capsule draw.fadeIn]
+
+[trigger draw.fadeIn /]
+
+[logic draw.fadeIn]
+  > animate.fadeIn: target = ctx.target duration = ctx.duration
+[/logic draw.fadeIn]
+
+[/capsule draw.fadeIn]
+
+[capsule draw.fadeOut]
+
+[trigger draw.fadeOut /]
+
+[logic draw.fadeOut]
+  > animate.fadeOut: target = ctx.target duration = ctx.duration
+[/logic draw.fadeOut]
+
+[/capsule draw.fadeOut]
+
+[capsule holoframe.load]
+
+[trigger holoframe.load /]
+
+[logic holoframe.load]
+  > draw.label: "🧊 Loading Holoframe: {{ ctx.frame }}"
+  > memory.set: holoframe.active = ctx.frame
+  > emit: holoframe.render
+[/logic holoframe.load]
+
+[/capsule holoframe.load]
+
+[capsule holoframe.render]
+
+[trigger holoframe.render /]
+
+[logic holoframe.render]
+  > draw.overlay: holoframe.{{ holoframe.active }}
+  > log: "[🧊] Rendered holoframe '{{ holoframe.active }}'"
+[/logic holoframe.render]
+
+[/capsule holoframe.render]
+
+[capsule holoframe.define]
+
+[trigger holoframe.define /]
+
+[logic holoframe.define]
+  > memory.set: holoframe.{{ ctx.id }} = ctx.content
+  > log: "[📦] Defined holoframe '{{ ctx.id }}'"
+[/logic holoframe.define]
+
+[/capsule holoframe.define]
+
+[capsule overlay.render]
+
+[trigger draw.overlay /]
+
+[logic overlay.render]
+  > draw.append: ctx.overlay
+  > log: "[🖼] Overlay rendered: {{ ctx.overlay }}"
+[/logic overlay.render]
+
+[/capsule overlay.render]
+
+[capsule overlay.clear]
+
+[trigger overlay.clear /]
+
+[logic overlay.clear]
+  > draw.clear
+  > log: "[🧹] Overlay cleared"
+[/logic overlay.clear]
+
+[/capsule overlay.clear]
+
+[capsule lens.focus]
+
+[trigger lens.focus /]
+
+[logic lens.focus]
+  > memory.set: lens.current = ctx.target
+  > draw.label: "🔍 Focus: {{ lens.current }}"
+[/logic lens.focus]
+
+[/capsule lens.focus]
+
+[capsule lens.shift]
+
+[trigger lens.shift /]
+
+[logic lens.shift]
+  > memory.set: lens.current = ctx.newFocus
+  > emit: lens.focus target = ctx.newFocus
+[/logic lens.shift]
+
+[/capsule lens.shift]
+
+[capsule shell.activate]
+
+[trigger shell.activate /]
+
+[logic shell.activate]
+  > memory.set: shell.state = "engaged"
+  > draw.label: "🛡 Holographic shell active"
+  > emit: shell.statusReport
+[/logic shell.activate]
+
+[/capsule shell.activate]
+
+[capsule shell.statusReport]
+
+[trigger shell.statusReport /]
+
+[logic shell.statusReport]
+  > log: "[🛡] Shell status: {{ shell.state }}"
+[/logic shell.statusReport]
+
+[/capsule shell.statusReport]
+
+[capsule draw.3d.scene]
+
+[trigger draw.3d.scene /]
+
+[logic draw.3d.scene]
+  > memory.set: render3d.scene = ctx.scene
+  > emit: render3d.update
+[/logic draw.3d.scene]
+
+[/capsule draw.3d.scene]
+
+[capsule draw.3d.object]
+
+[trigger draw.3d.object /]
+
+[logic draw.3d.object]
+  > memory.list.add: ctx.object to: render3d.scene.objects
+  > emit: render3d.update
+[/logic draw.3d.object]
+
+[/capsule draw.3d.object]
+
+[capsule draw.3d.light]
+
+[trigger draw.3d.light /]
+
+[logic draw.3d.light]
+  > memory.list.add: ctx.light to: render3d.scene.lights
+  > emit: render3d.update
+[/logic draw.3d.light]
+
+[/capsule draw.3d.light]
+
+[capsule draw.3d.material]
+
+[trigger draw.3d.material /]
+
+[logic draw.3d.material]
+  > memory.map.set: render3d.materials[ctx.name] = ctx.properties
+[/logic draw.3d.material]
+
+[/capsule draw.3d.material]
+
+[capsule draw.3d.transform]
+
+[trigger draw.3d.transform /]
+
+[logic draw.3d.transform]
+  > memory.map.set: render3d.transforms[ctx.target] = ctx.transform
+[/logic draw.3d.transform]
+
+[/capsule draw.3d.transform]
+
+[capsule render3d.update]
+
+[trigger render3d.update /]
+
+[logic render3d.update]
+  > emit: render3d.refresh.viewport
+  > log: "[🎥] 3D scene updated"
+[/logic render3d.update]
+
+[/capsule render3d.update]
+
+[capsule render3d.refresh.viewport]
+
+[trigger render3d.refresh.viewport /]
+
+[logic render3d.refresh.viewport]
+  > draw.label: "🔄 Updating 3D viewport with {{ len(render3d.scene.objects) }} objects"
+[/logic render3d.refresh.viewport]
+
+[/capsule render3d.refresh.viewport]
+
+[capsule draw.3d.clear]
+
+[trigger draw.3d.clear /]
+
+[logic draw.3d.clear]
+  > memory.set: render3d.scene.objects = []
+  > memory.set: render3d.scene.lights = []
+  > emit: render3d.update
+[/logic draw.3d.clear]
+
+[/capsule draw.3d.clear]
+[/capsule core19.visualFlow]
+[logic emit.timeline.reset]
+  > emit: timeline.reset
+  > log: "🚧 Emit stub for timeline.reset"
+[/logic emit.timeline.reset]
+
+[logic emit.draw.3d.object]
+  > emit: draw.3d.object
+  > log: "🚧 Emit stub for draw.3d.object"
+[/logic emit.draw.3d.object]
+
+[logic emit.holoframe.load]
+  > emit: holoframe.load
+  > log: "🚧 Emit stub for holoframe.load"
+[/logic emit.holoframe.load]
+
+[logic emit.draw.transition]
+  > emit: draw.transition
+  > log: "🚧 Emit stub for draw.transition"
+[/logic emit.draw.transition]
+
+[logic emit.lens.shift]
+  > emit: lens.shift
+  > log: "🚧 Emit stub for lens.shift"
+[/logic emit.lens.shift]
+
+[logic emit.draw.fadeOut]
+  > emit: draw.fadeOut
+  > log: "🚧 Emit stub for draw.fadeOut"
+[/logic emit.draw.fadeOut]
+
+[logic emit.timeline.pause]
+  > emit: timeline.pause
+  > log: "🚧 Emit stub for timeline.pause"
+[/logic emit.timeline.pause]
+
+[logic emit.holoframe.define]
+  > emit: holoframe.define
+  > log: "🚧 Emit stub for holoframe.define"
+[/logic emit.holoframe.define]
+
+[logic emit.shell.activate]
+  > emit: shell.activate
+  > log: "🚧 Emit stub for shell.activate"
+[/logic emit.shell.activate]
+
+[logic emit.draw.3d.light]
+  > emit: draw.3d.light
+  > log: "🚧 Emit stub for draw.3d.light"
+[/logic emit.draw.3d.light]
+
+[logic emit.timeline.play]
+  > emit: timeline.play
+  > log: "🚧 Emit stub for timeline.play"
+[/logic emit.timeline.play]
+
+[logic emit.timeline.inspect]
+  > emit: timeline.inspect
+  > log: "🚧 Emit stub for timeline.inspect"
+[/logic emit.timeline.inspect]
+
+[logic emit.draw.animate]
+  > emit: draw.animate
+  > log: "🚧 Emit stub for draw.animate"
+[/logic emit.draw.animate]
+
+[logic emit.draw.blink]
+  > emit: draw.blink
+  > log: "🚧 Emit stub for draw.blink"
+[/logic emit.draw.blink]
+
+[logic emit.visualFlow.boot]
+  > emit: visualFlow.boot
+  > log: "🚧 Emit stub for visualFlow.boot"
+[/logic emit.visualFlow.boot]
+
+[logic emit.draw.3d.transform]
+  > emit: draw.3d.transform
+  > log: "🚧 Emit stub for draw.3d.transform"
+[/logic emit.draw.3d.transform]
+
+[logic emit.draw.fadeIn]
+  > emit: draw.fadeIn
+  > log: "🚧 Emit stub for draw.fadeIn"
+[/logic emit.draw.fadeIn]
+
+[logic emit.draw.shake]
+  > emit: draw.shake
+  > log: "🚧 Emit stub for draw.shake"
+[/logic emit.draw.shake]
+
+[logic emit.draw.3d.clear]
+  > emit: draw.3d.clear
+  > log: "🚧 Emit stub for draw.3d.clear"
+[/logic emit.draw.3d.clear]
+
+[logic emit.draw.3d.scene]
+  > emit: draw.3d.scene
+  > log: "🚧 Emit stub for draw.3d.scene"
+[/logic emit.draw.3d.scene]
+
+[logic emit.timeline.define]
+  > emit: timeline.define
+  > log: "🚧 Emit stub for timeline.define"
+[/logic emit.timeline.define]
+
+[logic emit.draw.motion]
+  > emit: draw.motion
+  > log: "🚧 Emit stub for draw.motion"
+[/logic emit.draw.motion]
+
+[logic emit.draw.animateSequence]
+  > emit: draw.animateSequence
+  > log: "🚧 Emit stub for draw.animateSequence"
+[/logic emit.draw.animateSequence]
+
+[logic emit.draw.3d.material]
+  > emit: draw.3d.material
+  > log: "🚧 Emit stub for draw.3d.material"
+[/logic emit.draw.3d.material]
+
+[logic emit.overlay.clear]
+  > emit: overlay.clear
+  > log: "🚧 Emit stub for overlay.clear"
+[/logic emit.overlay.clear]
+
+[logic emit.draw.overlay]
+  > emit: draw.overlay
+  > log: "🚧 Emit stub for draw.overlay"
+[/logic emit.draw.overlay]

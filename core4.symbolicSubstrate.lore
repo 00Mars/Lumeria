@@ -1,0 +1,505 @@
+[capsule symbolicSubstrate]
+
+  [capsule symbolicSubstrate.bootstrap]
+    [trigger symbolicSubstrate.bootstrap /]
+    [logic substrate.bootstrap]
+      > log: "🧬 Bootstrapping symbolic substrate resolution..."
+
+      > emit: symbolicSubstrate.resolve.memory
+      > emit: symbolicSubstrate.resolve.logic
+      > emit: symbolicSubstrate.resolve.triggers
+      > emit: symbolicSubstrate.resolve.grammar
+      > emit: symbolicSubstrate.resolve.echo
+      > emit: symbolicSubstrate.resolve.routes
+      > emit: echo.clear  # Patch to resolve orphan trigger
+      > emit: echo.read
+      > emit: echo.scan
+      > emit: echo.write
+      > emit: env.snapshot
+      > emit: substrate.reset
+
+    [/logic substrate.bootstrap]
+  [/capsule symbolicSubstrate.bootstrap]
+
+  [capsule symbolicSubstrate.initLite]
+    [trigger substrate.init /]
+    [logic substrate.init]
+      > emit: symbolicSubstrate.resolve.memory
+      > emit: symbolicSubstrate.resolve.logic
+      > emit: symbolicSubstrate.bind.routes
+    [/logic substrate.init]
+  [/capsule symbolicSubstrate.initLite]
+
+  [capsule symbolicSubstrate.bind.routes]
+    [trigger symbolicSubstrate.bind.routes /]
+    [logic bind.routes]
+      > emit: symbolic.routes.scan
+      > emit: symbolic.routes.register
+    [/logic bind.routes]
+  [/capsule symbolicSubstrate.bind.routes]
+
+  [capsule symbolic.routes.scan]
+    [trigger symbolic.routes.scan /]
+    [logic route.scan]
+      > log: "🛰 Scanning for symbolic route patterns"
+      > emit: route.map.build
+    [/logic route.scan]
+  [/capsule symbolic.routes.scan]
+
+  [capsule symbolic.routes.register]
+    [trigger symbolic.routes.register /]
+    [logic route.register]
+      > log: "🧭 Registering symbolic routes"
+      > emit: route.map.activate
+    [/logic route.register]
+  [/capsule symbolic.routes.register]
+
+  [capsule memory.resolve.contexts]
+    [trigger memory.resolve.contexts /]
+    [logic memory.contexts]
+      > log: "🔍 Resolving memory.context zones"
+      > emit: memory.zone.inject env = ctx.env
+    [/logic memory.contexts]
+  [/capsule memory.resolve.contexts]
+
+  [capsule memory.resolve.ghosts]
+    [trigger memory.resolve.ghosts /]
+    [logic memory.ghosts]
+      > log: "👻 Resolving memory.ghost traces"
+      > emit: ghost.listen
+    [/logic memory.ghosts]
+  [/capsule memory.resolve.ghosts]
+
+  [capsule memory.resolve.echos]
+    [trigger memory.resolve.echos /]
+    [logic memory.echos]
+      > log: "🔁 Resolving memory.echo substrate"
+      > emit: echo.load.substate
+    [/logic memory.echos]
+  [/capsule memory.resolve.echos]
+
+  [capsule logic.resolve.contexts]
+    [trigger logic.resolve.contexts /]
+    [logic logic.contexts]
+      > log: "📘 Resolving logic.context blocks"
+      > emit: logic.context.load from = ctx.env
+    [/logic logic.contexts]
+  [/capsule logic.resolve.contexts]
+
+  [capsule logic.resolve.handlers]
+    [trigger logic.resolve.handlers /]
+    [logic logic.handlers]
+      > log: "🎛 Resolving logic.handler links"
+      > emit: handlerRegistry.scan
+      > emit: handlerRegistry.bind
+    [/logic logic.handlers]
+  [/capsule logic.resolve.handlers]
+
+  [capsule logic.resolve.patterns]
+    [trigger logic.resolve.patterns /]
+    [logic logic.patterns]
+      > log: "🧬 Resolving logic.patterns"
+      > emit: patternRegistry.scan
+      > emit: patternRegistry.register
+    [/logic logic.patterns]
+  [/capsule logic.resolve.patterns]
+
+  [capsule symbolicSubstrate.resolve.memory]
+    [trigger symbolicSubstrate.resolve.memory /]
+    [memory symbolic.env.keys /]
+    [logic memory.resolve]
+      > log: "🔍 Resolving memory keys from symbolic substrate..."
+      - each: key in ctx.env.memory
+        do:
+          > memory.set: symbolic.env.keys += key
+          > memory.set: {{ key }} = ctx.env.memory[key]
+          > log: "📥 [memory] {{ key }} → {{ ctx.env.memory[key] }}"
+    [/logic memory.resolve]
+  [/capsule symbolicSubstrate.resolve.memory]
+
+  [capsule symbolicSubstrate.resolve.logic]
+    [trigger symbolicSubstrate.resolve.logic /]
+    [memory symbolic.logic.refs /]
+    [logic logic.resolve]
+      > log: "🧠 Resolving logic symbols from substrate..."
+      - each: ref in ctx.env.logic
+        do:
+          > memory.set: symbolic.logic.refs += ref
+          > emit: logic.inject symbol = ref
+          > log: "🧩 Injected logic ref: {{ ref }}"
+    [/logic logic.resolve]
+  [/capsule symbolicSubstrate.resolve.logic]
+
+  [capsule symbolicSubstrate.resolve.triggers]
+    [trigger symbolicSubstrate.resolve.triggers /]
+    [memory symbolic.trigger.refs /]
+    [logic triggers.resolve]
+      > log: "🎯 Resolving trigger references from substrate..."
+      [condition triggers.exist]
+        check: ctx.env.triggers is not null
+        then:
+          - each: trig in ctx.env.triggers
+            do:
+              > memory.set: symbolic.trigger.refs += trig
+              > emit: trigger.inject symbol = trig
+              > log: "⚡ Injected trigger: {{ trig }}"
+        else:
+          > log: "⚠️ No trigger references found in substrate."
+      [/condition triggers.exist]
+    [/logic triggers.resolve]
+  [/capsule symbolicSubstrate.resolve.triggers]
+
+  [capsule symbolicSubstrate.resolve.grammar]
+    [trigger symbolicSubstrate.resolve.grammar /]
+    [memory grammar.refs /]
+    [logic grammar.resolve]
+      > log: "📘 Resolving grammar references from substrate..."
+      [condition grammar.exists]
+        check: ctx.env.grammar is not null
+        then:
+          - each: gram in ctx.env.grammar
+            do:
+              > memory.set: grammar.refs += gram
+              > emit: grammar.inject symbol = gram
+              > log: "🔤 Injected grammar: {{ gram }}"
+        else:
+          > log: "⚠️ No grammar entries found in substrate."
+      [/condition grammar.exists]
+    [/logic grammar.resolve]
+  [/capsule symbolicSubstrate.resolve.grammar]
+
+  [capsule symbolicSubstrate.resolve.echo]
+    [trigger symbolicSubstrate.resolve.echo /]
+    [memory symbolic.echo.refs /]
+    [logic echo.resolve]
+      > log: "🪞 Resolving echo memory references..."
+      [condition echo.exists]
+        check: ctx.env.echo is not null
+        then:
+          - each: echo in ctx.env.echo
+            do:
+              > memory.set: symbolic.echo.refs += echo
+              > emit: echo.inject symbol = echo
+              > log: "🫧 Injected echo memory: {{ echo }}"
+        else:
+          > log: "⚠️ No echo memory entries found in substrate."
+      [/condition echo.exists]
+    [/logic echo.resolve]
+  [/capsule symbolicSubstrate.resolve.echo]
+
+  [capsule symbolicSubstrate.route.signal]
+    [trigger symbolicSubstrate.route.signal /]
+    [memory signal.route.table /]
+    [memory signal.route.history /]
+    [logic signal.router]
+      > log: "🧭 Routing signal through symbolic substrate..."
+      [condition route.defined]
+        check: ctx.signal in signal.route.table
+        then:
+          > memory.append: signal.route.history = ctx.signal
+          > emit: signal.route.table[ctx.signal]
+          > log: "➡️ Routed signal: {{ ctx.signal }} → {{ signal.route.table[ctx.signal] }}"
+        else:
+          > log: "❓ No route defined for signal: {{ ctx.signal }}"
+          > emit: signal.route.unresolved symbol = ctx.signal
+      [/condition route.defined]
+    [/logic signal.router]
+  [/capsule symbolicSubstrate.route.signal]
+
+  [capsule symbolicSubstrate.route.logic]
+    [trigger symbolicSubstrate.route.logic /]
+    [memory logic.route.map /]
+    [logic logic.router]
+      > log: "🧠 Routing logic call..."
+      [condition logic.mapped]
+        check: ctx.logic in logic.route.map
+        then:
+          > emit: logic.route.map[ctx.logic]
+          > log: "🔀 Logic mapped: {{ ctx.logic }} → {{ logic.route.map[ctx.logic] }}"
+        else:
+          > log: "⚠️ Logic call unmapped: {{ ctx.logic }}"
+          > emit: logic.route.unmapped symbol = ctx.logic
+      [/condition logic.mapped]
+    [/logic logic.router]
+  [/capsule symbolicSubstrate.route.logic]
+
+  [capsule symbolicSubstrate.echo.write]
+    [trigger echo.write /]
+    [memory echo.memory /]
+    [memory echo.write.history /]
+    [logic echo.writer]
+      > log: "📝 Writing to symbolic echo memory..."
+      > memory.set: echo.memory[ctx.key] = ctx.value
+      > memory.append: echo.write.history = { key: ctx.key, value: ctx.value, time: now() }
+      > emit: echo.write.confirmed key = ctx.key
+    [/logic echo.writer]
+  [/capsule symbolicSubstrate.echo.write]
+
+  [capsule symbolicSubstrate.echo.read]
+    [trigger echo.read /]
+    [memory echo.memory /]
+    [logic echo.reader]
+      [condition echo.key.exists]
+        check: ctx.key in echo.memory
+        then:
+          > emit: echo.read.result key = ctx.key value = echo.memory[ctx.key]
+          > log: "📖 Read from echo: {{ ctx.key }} → {{ echo.memory[ctx.key] }}"
+        else:
+          > emit: echo.read.missing key = ctx.key
+          > log: "❌ Echo key missing: {{ ctx.key }}"
+      [/condition echo.key.exists]
+    [/logic echo.reader]
+  [/capsule symbolicSubstrate.echo.read]
+
+  [capsule symbolicSubstrate.echo.scan]
+    [trigger echo.scan /]
+    [memory echo.memory /]
+    [memory echo.scan.keys /]
+    [memory echo.scan.snapshot /]
+    [logic echo.scanner]
+      > memory.set: echo.scan.keys = keys(echo.memory)
+      > memory.set: echo.scan.snapshot = echo.memory
+      > emit: echo.scan.ready
+      > log: "🔍 Scanned echo memory: {{ echo.scan.keys }}"
+    [/logic echo.scanner]
+  [/capsule symbolicSubstrate.echo.scan]
+
+  [capsule symbolicSubstrate.echo.clear]
+    [trigger echo.clear /]
+    [memory echo.memory /]
+    [memory echo.write.history /]
+    [logic echo.clearer]
+      > memory.set: echo.memory = {}
+      > memory.set: echo.write.history = []
+      > emit: echo.cleared
+      > log: "🧹 Echo memory fully cleared"
+    [/logic echo.clearer]
+  [/capsule symbolicSubstrate.echo.clear]
+
+  [capsule symbolicSubstrate.env.snapshot]
+    [trigger env.snapshot /]
+    [memory symbolic.environment /]
+    [memory environment.snapshot /]
+    [logic env.snapshot]
+      > memory.set: environment.snapshot = symbolic.environment
+      > emit: env.snapshot.ready
+      > log: "📸 Snapshot of symbolic environment saved"
+    [/logic env.snapshot]
+  [/capsule symbolicSubstrate.env.snapshot]
+
+  [capsule symbolicSubstrate.runtime.reset]
+    [trigger substrate.reset /]
+    [memory symbolic.environment /]
+    [memory signal.queue /]
+    [memory signal.history /]
+    [memory execution.flow /]
+    [logic substrate.reset]
+      > memory.set: symbolic.environment = {}
+      > memory.set: signal.queue = []
+      > memory.set: signal.history = []
+      > memory.set: execution.flow = []
+      > emit: substrate.reset.complete
+      > log: "♻️ Symbolic runtime reset completed"
+    [/logic substrate.reset]
+  [/capsule symbolicSubstrate.runtime.reset]
+
+[/capsule symbolicSubstrate]
+[trigger logic.inject /]
+
+[logic logic.inject]
+  > log: "🚧 Trigger stub for logic.inject"
+[/logic logic.inject]
+
+[trigger logic.context.load /]
+
+[logic logic.context.load]
+  > log: "🚧 Trigger stub for logic.context.load"
+[/logic logic.context.load]
+
+[trigger echo.load.substate /]
+
+[logic echo.load.substate]
+  > log: "🚧 Trigger stub for echo.load.substate"
+[/logic echo.load.substate]
+
+[trigger substrate.reset.complete /]
+
+[logic substrate.reset.complete]
+  > log: "🚧 Trigger stub for substrate.reset.complete"
+[/logic substrate.reset.complete]
+
+[trigger echo.cleared /]
+
+[logic echo.cleared]
+  > log: "🚧 Trigger stub for echo.cleared"
+[/logic echo.cleared]
+
+[trigger trigger.inject /]
+
+[logic trigger.inject]
+  > log: "🚧 Trigger stub for trigger.inject"
+[/logic trigger.inject]
+
+[trigger logic.route.unmapped /]
+
+[logic logic.route.unmapped]
+  > log: "🚧 Trigger stub for logic.route.unmapped"
+[/logic logic.route.unmapped]
+
+[trigger signal.route.table /]
+
+[logic signal.route.table]
+  > log: "🚧 Trigger stub for signal.route.table"
+[/logic signal.route.table]
+
+[trigger echo.inject /]
+
+[logic echo.inject]
+  > log: "🚧 Trigger stub for echo.inject"
+[/logic echo.inject]
+
+[trigger grammar.inject /]
+
+[logic grammar.inject]
+  > log: "🚧 Trigger stub for grammar.inject"
+[/logic grammar.inject]
+
+[trigger echo.scan.ready /]
+
+[logic echo.scan.ready]
+  > log: "🚧 Trigger stub for echo.scan.ready"
+[/logic echo.scan.ready]
+
+[trigger echo.read.result /]
+
+[logic echo.read.result]
+  > log: "🚧 Trigger stub for echo.read.result"
+[/logic echo.read.result]
+
+[trigger symbolicSubstrate.resolve.routes /]
+
+[logic symbolicSubstrate.resolve.routes]
+  > log: "🚧 Trigger stub for symbolicSubstrate.resolve.routes"
+[/logic symbolicSubstrate.resolve.routes]
+
+[trigger route.map.build /]
+
+[logic route.map.build]
+  > log: "🚧 Trigger stub for route.map.build"
+[/logic route.map.build]
+
+[trigger patternRegistry.scan /]
+
+[logic patternRegistry.scan]
+  > log: "🚧 Trigger stub for patternRegistry.scan"
+[/logic patternRegistry.scan]
+
+[trigger logic.route.map /]
+
+[logic logic.route.map]
+  > log: "🚧 Trigger stub for logic.route.map"
+[/logic logic.route.map]
+
+[trigger env.snapshot.ready /]
+
+[logic env.snapshot.ready]
+  > log: "🚧 Trigger stub for env.snapshot.ready"
+[/logic env.snapshot.ready]
+
+[trigger echo.write.confirmed /]
+
+[logic echo.write.confirmed]
+  > log: "🚧 Trigger stub for echo.write.confirmed"
+[/logic echo.write.confirmed]
+
+[trigger handlerRegistry.bind /]
+
+[logic handlerRegistry.bind]
+  > log: "🚧 Trigger stub for handlerRegistry.bind"
+[/logic handlerRegistry.bind]
+
+[trigger patternRegistry.register /]
+
+[logic patternRegistry.register]
+  > log: "🚧 Trigger stub for patternRegistry.register"
+[/logic patternRegistry.register]
+
+[trigger route.map.activate /]
+
+[logic route.map.activate]
+  > log: "🚧 Trigger stub for route.map.activate"
+[/logic route.map.activate]
+
+[trigger memory.zone.inject /]
+
+[logic memory.zone.inject]
+  > log: "🚧 Trigger stub for memory.zone.inject"
+[/logic memory.zone.inject]
+
+[trigger handlerRegistry.scan /]
+
+[logic handlerRegistry.scan]
+  > log: "🚧 Trigger stub for handlerRegistry.scan"
+[/logic handlerRegistry.scan]
+
+[trigger signal.route.unresolved /]
+
+[logic signal.route.unresolved]
+  > log: "🚧 Trigger stub for signal.route.unresolved"
+[/logic signal.route.unresolved]
+
+[trigger echo.read.missing /]
+
+[logic echo.read.missing]
+  > log: "🚧 Trigger stub for echo.read.missing"
+[/logic echo.read.missing]
+
+[logic emit.logic.resolve.patterns]
+  > emit: logic.resolve.patterns
+  > log: "🚧 Emit stub for logic.resolve.patterns"
+[/logic emit.logic.resolve.patterns]
+
+[logic emit.logic.resolve.contexts]
+  > emit: logic.resolve.contexts
+  > log: "🚧 Emit stub for logic.resolve.contexts"
+[/logic emit.logic.resolve.contexts]
+
+[logic emit.symbolicSubstrate.route.signal]
+  > emit: symbolicSubstrate.route.signal
+  > log: "🚧 Emit stub for symbolicSubstrate.route.signal"
+[/logic emit.symbolicSubstrate.route.signal]
+
+[logic emit.symbolicSubstrate.route.logic]
+  > emit: symbolicSubstrate.route.logic
+  > log: "🚧 Emit stub for symbolicSubstrate.route.logic"
+[/logic emit.symbolicSubstrate.route.logic]
+
+[logic emit.symbolicSubstrate.bootstrap]
+  > emit: symbolicSubstrate.bootstrap
+  > log: "🚧 Emit stub for symbolicSubstrate.bootstrap"
+[/logic emit.symbolicSubstrate.bootstrap]
+
+[logic emit.memory.resolve.echos]
+  > emit: memory.resolve.echos
+  > log: "🚧 Emit stub for memory.resolve.echos"
+[/logic emit.memory.resolve.echos]
+
+[logic emit.substrate.init]
+  > emit: substrate.init
+  > log: "🚧 Emit stub for substrate.init"
+[/logic emit.substrate.init]
+
+[logic emit.memory.resolve.ghosts]
+  > emit: memory.resolve.ghosts
+  > log: "🚧 Emit stub for memory.resolve.ghosts"
+[/logic emit.memory.resolve.ghosts]
+
+[logic emit.logic.resolve.handlers]
+  > emit: logic.resolve.handlers
+  > log: "🚧 Emit stub for logic.resolve.handlers"
+[/logic emit.logic.resolve.handlers]
+
+[logic emit.memory.resolve.contexts]
+  > emit: memory.resolve.contexts
+  > log: "🚧 Emit stub for memory.resolve.contexts"
+[/logic emit.memory.resolve.contexts]

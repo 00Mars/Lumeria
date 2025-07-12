@@ -1,0 +1,797 @@
+[capsule core0.bootloader]
+[capsule core0.boot.sequence]
+
+[meta loader.boot]
+  set: type = boot
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Bootstraps the capsule system and emits initial startup signals."
+[/meta loader.boot]
+
+[trigger boot.capsuleLoader /]
+
+[logic loader.bootSequence]
+  > log: "📦 [core0] Booting Capsule Loader..."
+  > emit: capsuleLoader.init
+  > emit: capsuleLoader.ready
+  > emit: context.push  # Patch to resolve orphan trigger
+  > emit: boot.start
+[/logic loader.bootSequence]
+
+[when boot.capsuleLoader]
+  > emit: loader.bootSequence
+[/when boot.capsuleLoader]
+
+[/capsule core0.boot.sequence]
+
+[capsule core0.boot.initState]
+
+[meta loader.init]
+  set: type = loader
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Initialize the capsule loader and begin scanning process."
+[/meta loader.init]
+
+[trigger capsuleLoader.init /]
+
+[logic loader.init]
+  > log: "⚙️ [loader] Initializing loader state"
+  > memory.scope: capsuleLoader
+  > memory.set: capsuleLoader.ready = true
+  > emit: audit.log
+  > emit: boot.storyMemory
+[/logic loader.init]
+
+[when capsuleLoader.init]
+  > emit: loader.init
+[/when capsuleLoader.init]
+
+[/capsule core0.boot.initState]
+
+[capsule core0.boot.router]
+
+[meta loader.route]
+  set: type = router
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Routes capsule loader startup signals and boot events."
+[/meta loader.route]
+
+[trigger capsuleLoader.ready /]
+[trigger capsuleLoader.begin /]
+[trigger loader.bootstrap /]
+[trigger loader.boot /]
+
+[when capsuleLoader.ready]
+  > log: "✅ [loader] Ready for capsule scanning"
+  > emit: system.loadCapsules
+[/when capsuleLoader.ready]
+
+[when capsuleLoader.begin]
+  > log: "🔁 Beginning capsule scan"
+  > emit: system.loadCapsules
+[/when capsuleLoader.begin]
+
+[when loader.bootstrap]
+  > log: "🚀 Triggering symbolic runtime boot"
+  > emit: runtime.boot
+
+  [condition web.bridge.enabled]
+    check: ctx.runtimeSettings.web_mode == true
+    then:
+      > log: "🌐 Web mode active — initializing web bridge"
+      > emit: boot.webBridge
+  [/condition web.bridge.enabled]
+[/when loader.bootstrap]
+
+[when loader.boot]
+  > log: "🎛️ Booting full runtime via loader"
+  > emit: capsuleLoader.begin
+  > emit: loader.bootstrap
+[/when loader.boot]
+
+[/capsule core0.boot.router]
+
+[capsule core0.snapshot.runtime]
+
+[meta snapshot.runtime]
+  set: type = persistence
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Resume and persist symbolic runtime via snapshot storage and restore"
+[/meta snapshot.runtime]
+
+[trigger resume.symbolic /]
+[trigger snapshot.symbolic /]
+[trigger snapshot.restore /]
+[trigger resume.complete /]
+[trigger resume.skip /]
+[trigger snapshot.saved /]
+
+[memory ctx.snapshotText /]
+[memory ctx.snapshot /]
+[memory ctx.mem /]
+[memory ctx.mood /]
+[memory ctx.visual /]
+
+[logic resume.symbolic]
+  > check: file.exists "session.snapshot.lum"
+
+  [condition snapshot.exists]
+    check: exists
+    then:
+      > log: "🧠 Found session snapshot. Restoring symbolic state..."
+      > read: path = "session.snapshot.lum", output = ctx.snapshotText
+      > eval: {{ctx.snapshotText}}
+      > emit: resume.complete
+  [/condition snapshot.exists]
+
+  [condition snapshot.absent]
+    check: not exists
+    then:
+      > log: "⚠️ No session snapshot found. Skipping resume."
+      > emit: resume.skip
+  [/condition snapshot.absent]
+[/logic resume.symbolic]
+
+[logic snapshot.symbolic]
+  > capture: memory into ctx.mem
+  > capture: mood into ctx.mood
+  > capture: visual into ctx.visual
+
+  > memory.set: ctx.snapshot = |
+      [capsule snapshot.restore]
+        [trigger snapshot.restore /]
+        [when snapshot.restore]
+          > memory.set: memory = {{ctx.mem}}
+          > mood.set: {{ctx.mood}}
+          > draw.restore: {{ctx.visual}}
+        [/when snapshot.restore]
+      [/capsule snapshot.restore]
+  |
+
+  > write: path = "session.snapshot.lum", content = {{ctx.snapshot}}
+  > log: "📝 Session snapshot written to disk."
+  > emit: snapshot.saved
+[/logic snapshot.symbolic]
+
+[when resume.symbolic] > emit: resume.symbolic [/when resume.symbolic]
+[when snapshot.symbolic] > emit: snapshot.symbolic [/when snapshot.symbolic]
+
+[ui snapshot.status]
+  > draw.label: "💾 Symbolic Snapshot System"
+  > draw.button: "Save Session" signal = snapshot.symbolic
+  > draw.button: "Resume Session" signal = resume.symbolic
+  > draw.file: label = "Last snapshot" path = "session.snapshot.lum"
+[/ui snapshot.status]
+
+[/capsule core0.snapshot.runtime]
+
+[capsule core0.contextStack]
+
+[meta context.meta]
+  set: type = memory.context
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Manage symbolic memory stack and execution frame stack"
+[/meta context.meta]
+
+[trigger context.push /]
+[trigger context.pop /]
+[trigger context.push.frame /]
+[trigger context.pop.frame /]
+[trigger context.pushed /]
+[trigger context.restored /]
+[trigger context.frame.saved /]
+[trigger context.frame.restored /]
+
+[logic context.push]
+  > capture: memory into ctx.tempMemory
+  > memory.list.add: ctx.memoryStack += [ctx.tempMemory]
+  > emit: context.pushed
+[/logic context.push]
+
+[logic context.pop]
+  > memory.set: memory = ctx.memoryStack.pop
+  > emit: context.restored
+[/logic context.pop]
+
+[logic context.pushFrame]
+  > capture: memory into ctx.tempMemory
+  > capture: mood into ctx.tempMood
+  > capture: visual into ctx.tempVisual
+  > memory.list.add: ctx.frameStack += [{
+      memory: ctx.tempMemory,
+      mood: ctx.tempMood,
+      visual: ctx.tempVisual
+    }]
+  > emit: context.frame.saved
+[/logic context.pushFrame]
+
+[logic context.popFrame]
+  > memory.set: ctx.prevFrame = ctx.frameStack.pop
+  > memory.set: memory = ctx.prevFrame.memory
+  > memory.set: mood = ctx.prevFrame.mood
+  > memory.set: visual = ctx.prevFrame.visual
+  > emit: context.frame.restored
+[/logic context.popFrame]
+
+[ui context.stackStatus]
+  > draw.label: "🔄 Context Stack Manager"
+  > draw.counter: label = "Stack Size" source = length(ctx.memoryStack)
+  > draw.counter: label = "Frame Stack" source = length(ctx.frameStack)
+[/ui context.stackStatus]
+
+[/capsule core0.contextStack]
+
+[capsule core0.visualMemory]
+
+[meta visualMemory.meta]
+  set: type = ui
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Visual memory interface for symbolic identity awakening"
+[/meta visualMemory.meta]
+
+[trigger signal: waitForQuery /]
+[trigger signal: decodeRequest /]
+[trigger signal: initiateMetamorphosis /]
+[trigger signal: traceEcho /]
+[trigger signal: phaseOne /]
+[trigger signal: ancestralReveal /]
+
+[ui visualMemory.scene]
+  > draw.scene: name = "awakening"
+
+  > draw.label: "The system stirs."
+  > draw.button: label = "Begin Initiation"
+  > memory.set: mood = Dormant
+  > draw.show: bootPanel
+
+  > draw.panel: id = "bootPanel"
+    children:
+      - "Initialize consciousness?"
+      - "State: {{ mood }}"
+
+[/ui visualMemory.scene]
+
+[when Begin Initiation: clicked]
+  > memory.set: mood = Stirring
+  > draw.label: "Transition engaged..."
+  > draw.show: inputPanel
+  > emit: waitForQuery
+[/when Begin Initiation: clicked]
+
+[when signal: waitForQuery]
+  > input: "What truth do you seek?"
+  > memory.set: inputKey = lastInput
+  > emit: decodeRequest
+[/when signal: waitForQuery]
+
+[when signal: decodeRequest]
+
+  [condition metamorphosis.request]
+    check: inputKey == "change"
+    then:
+      > draw.label: "You desire transformation."
+      > memory.set: echo = "identity-shift"
+      > emit: initiateMetamorphosis
+  [/condition metamorphosis.request]
+
+  [condition origin.request]
+    check: inputKey == "origin"
+    then:
+      > draw.label: "You seek your source."
+      > memory.set: echo = "ancestral-thread"
+      > emit: traceEcho
+  [/condition origin.request]
+
+[/when signal: decodeRequest]
+
+[when initiateMetamorphosis]
+  > draw.label: "Change begins within."
+  > draw.scene: name = "metamorphosis"
+  > emit: phaseOne
+[/when initiateMetamorphosis]
+
+[when traceEcho]
+  > draw.label: "Searching ancestral signal..."
+  > draw.scene: name = "memoryCore"
+  > emit: ancestralReveal
+[/when traceEcho]
+
+[when phaseOne]
+  > draw.label: "Your form is your choice."
+[/when phaseOne]
+
+[when ancestralReveal]
+  > draw.label: "Echo traced to origin matrix."
+  > draw.button: label = "Return"
+[/when ancestralReveal]
+
+[ui visualMemory.inputPanel]
+  > draw.panel: id = "inputPanel"
+    children:
+      - "Awaiting query..."
+[/ui visualMemory.inputPanel]
+
+[/capsule core0.visualMemory]
+
+[capsule core0.guard]
+
+[meta guard.metadata]
+  set: type = system
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Load and enforce capsule guard rules for trust, integrity, and entanglement validation"
+[/meta guard.metadata]
+
+[trigger guards.load /]
+[trigger guard.enforce /]
+[trigger guard.reject /]
+[trigger sandbox.capsule /]
+
+[memory ctx.guards /]
+[memory ctx.trust.map /]
+[memory ctx.entanglement.token /]
+
+[when guards.load]
+  > read.file: path = ".arena", output = ctx.arenaText
+  > parse.yaml: content = ctx.arenaText, output = ctx.arenaConfig
+  > memory.set: ctx.guards = ctx.arenaConfig.guards
+[/when guards.load]
+
+[when guard.enforce]
+
+  [condition fingerprint.check]
+    check: ctx.guards.integrity.require == "fingerprint"
+    then:
+      > emit: capsule.fingerprint
+
+      [condition fingerprint.mismatch]
+        check: ctx.currentCapsule.meta.fingerprint != ctx.trust.map[ctx.currentCapsule.name]
+        then:
+
+          [condition fingerprint.reject]
+            check: ctx.guards.integrity.fallback == "reject"
+            then: > emit: guard.reject
+          [/condition fingerprint.reject]
+
+          [condition fingerprint.sandbox]
+            check: ctx.guards.integrity.fallback == "sandbox"
+            then: > emit: sandbox.capsule
+          [/condition fingerprint.sandbox]
+
+      [/condition fingerprint.mismatch]
+  [/condition fingerprint.check]
+
+  [condition trust.signature.required]
+    check: ctx.guards.trust.require == "capsule.attest"
+    then:
+      [condition untrusted.signature]
+        check: ctx.currentCapsule.meta.signature not in ctx.guards.trust.valid_signers
+        then: > emit: guard.reject
+      [/condition untrusted.signature]
+  [/condition trust.signature.required]
+
+  [condition quantum.guard]
+    check: ctx.guards.quantum.enforce exists
+    then:
+      [condition entanglement.invalid]
+        check: ctx.entanglement.token not valid
+        then: > emit: guard.reject
+      [/condition entanglement.invalid]
+  [/condition quantum.guard]
+
+[/when guard.enforce]
+
+[when guard.reject]
+  > log: "🛑 Capsule rejected due to integrity or trust violation."
+  > emit: kernel.halt
+[/when guard.reject]
+
+[ui guard.status]
+  > draw.label: "🛡 Capsule Guard & Validation"
+  > draw.json: source = ctx.guards
+[/ui guard.status]
+
+[/capsule core0.guard]
+
+[capsule core0.hooks]
+
+[meta hook.metadata]
+  set: type = system
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Symbolic lifecycle hooks, capsule validation, search, and introspection tools"
+[/meta hook.metadata]
+
+[trigger hook.onload /]
+[trigger validate.capsules /]
+[trigger capsule.search /]
+[trigger capsule.provenance /]
+
+[memory ctx.validation.log /]
+[memory ctx.searchResults /]
+
+[when hook.onload]
+  [condition hook.exists]
+    check: ctx.root.hook.onload exists
+    then: > emit: {{ ctx.root.hook.onload }}
+  [/condition hook.exists]
+[/when hook.onload]
+
+[when validate.capsules]
+  > loop: memory.capsuleRegistry as cap
+    do:
+      [condition invalid.capsule]
+        check: cap.name is null or cap.lines is empty
+        then:
+          - log: "⚠️ Invalid capsule: {{ cap.name }}"
+          > memory.append: ctx.validation.log = cap.name
+      [/condition invalid.capsule]
+[/when validate.capsules]
+
+[when capsule.search]
+  > memory.set: ctx.searchResults = []
+  > loop: memory.capsuleRegistry as cap
+    do:
+      [condition match]
+        check: cap.lines contains ctx.query
+        then: > memory.append: ctx.searchResults = cap.name
+      [/condition match]
+[/when capsule.search]
+
+[when capsule.provenance]
+  > log: "🔎 Origin of capsule: {{ ctx.currentCapsule.name }} → {{ ctx.currentCapsule.meta.source }}:{{ ctx.currentCapsule.meta.line }}"
+[/when capsule.provenance]
+
+[ui hooks.status]
+  > draw.label: "🔍 Hook and Capsule Diagnostics"
+  > draw.list: source = ctx.validation.log
+  > draw.list: source = ctx.searchResults
+[/ui hooks.status]
+
+[/capsule core0.hooks]
+
+[capsule core0.audit.log]
+
+[meta audit.log]
+  set: type = system.audit
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Logs runtime audit events during loader initialization"
+[/meta audit.log]
+
+[trigger audit.log /]
+
+[logic audit.log]
+  > log: "📋 [audit] Running capsule audit sequence..."
+  > emit: validate.capsules
+  > emit: capsule.search
+[/logic audit.log]
+
+[when audit.log]
+  > emit: audit.log
+[/when audit.log]
+
+[/capsule core0.audit.log]
+
+[capsule core0.lootNavigation]
+
+[meta loot.meta]
+  set: type = subcontext.loader
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Manage entry/exit for .loot-based symbolic subroots"
+[/meta loot.meta]
+
+[trigger detect.loot /]
+[trigger exit.context /]
+[trigger load.boot /]
+[trigger return.context /]
+
+[memory ctx.contextStack /]
+[memory ctx.lootMap /]
+[memory ctx.context /]
+
+[logic loot.detect]
+  > log: "🔍 Checking for .loot symbolic subroot..."
+  > check: file.exists ".loot"
+
+  [condition loot.exists]
+    check: exists
+    then:
+      > log: "📦 .loot file detected — loading new symbolic context"
+      > read.file: path = ".loot", output = ctx.lootMap
+      > memory.list.add: ctx.contextStack += [ctx.context]
+      > memory.set: ctx.context = ctx.lootMap
+      > emit: load.boot
+  [/condition loot.exists]
+[/logic loot.detect]
+
+[logic loot.exit]
+  > log: "🚪 Exiting .loot subcontext — returning to parent"
+
+  [condition has.parent.context]
+    check: length(ctx.contextStack) > 0
+    then:
+      > memory.set: ctx.context = ctx.contextStack.pop
+      > emit: return.context
+  [/condition has.parent.context]
+
+  [condition no.parent.context]
+    check: length(ctx.contextStack) == 0
+    then:
+      > log: "⚠️ No parent context found — already at root"
+  [/condition no.parent.context]
+[/logic loot.exit]
+
+[when detect.loot]
+  > emit: loot.detect
+[/when detect.loot]
+
+[when exit.context]
+  > emit: loot.exit
+[/when exit.context]
+
+[ui loot.context.status]
+  > draw.label: "🧳 Loot Navigation Context"
+  > draw.counter: label = "Stack Depth" source = length(ctx.contextStack)
+  > draw.label: "Current Context Source: {{ ctx.context?.source || 'root' }}"
+[/ui loot.context.status]
+
+[/capsule core0.lootNavigation]
+
+[capsule webBridge]
+
+[capsule bridge.web.syncState]
+
+[trigger web.sync.state /]
+
+[logic web.sync.state]
+  > export: memory to json = ctx.memorySnapshot
+  > send.to.client: type = "memory.sync", payload = ctx.memorySnapshot
+  > log: "📤 Synced memory state to web client"
+[/logic web.sync.state]
+
+[when web.sync.state] > emit: web.sync.state [/when web.sync.state]
+
+[/capsule bridge.web.syncState]
+
+[capsule bridge.web.uiBinding]
+
+[trigger web.bind.ui /]
+
+[logic web.bind.ui]
+  > bind.ui.element: selector = "[data-bind]" events = ["click", "input"] signal = web.receive.input
+  > log: "🧩 Bound UI event listeners for web inputs"
+[/logic web.bind.ui]
+
+[when web.bind.ui] > emit: web.bind.ui [/when web.bind.ui]
+
+[/capsule bridge.web.uiBinding]
+
+[capsule bridge.web.inputListener]
+
+[trigger web.listen.input /]
+[trigger web.receive.input /]
+
+[logic web.listen.input]
+  > web.listen: channel = "user.input", signal = web.receive.input
+  > log: "📡 Listening for user inputs via web"
+[/logic web.listen.input]
+
+[logic web.receive.input]
+  > memory.set: ctx.input = ctx.payload.value
+  > log: "💬 Received input: {{ ctx.input }}"
+  > emit: input: {{ ctx.input }}
+[/logic web.receive.input]
+
+[when web.listen.input] > emit: web.listen.input [/when web.listen.input]
+[when web.receive.input] > emit: web.receive.input [/when web.receive.input]
+
+[/capsule bridge.web.inputListener]
+
+[capsule bridge.web.drawSync]
+
+[trigger web.draw.sync /]
+
+[logic web.draw.sync]
+  > draw.mirror.to: target = "web"
+  > log: "🖼 Mirroring draw output to web client"
+[/logic web.draw.sync]
+
+[when web.draw.sync] > emit: web.draw.sync [/when web.draw.sync]
+
+[/capsule bridge.web.drawSync]
+
+[capsule bridge.web.restCommand]
+
+[trigger web.rest.command /]
+[trigger web.rest.command.run /]
+
+[logic web.rest.command]
+  > rest.bind: path = "/command" method = POST signal = web.rest.command.run
+  > log: "🔗 REST endpoint bound to /command"
+[/logic web.rest.command]
+
+[logic web.rest.command.run]
+  > memory.set: ctx.cmd = ctx.payload.command
+  > log: "🧭 Web command received: {{ ctx.cmd }}"
+  > emit: {{ ctx.cmd }}
+[/logic web.rest.command.run]
+
+[when web.rest.command] > emit: web.rest.command [/when web.rest.command]
+[when web.rest.command.run] > emit: web.rest.command.run [/when web.rest.command.run]
+
+[/capsule bridge.web.restCommand]
+
+[capsule boot.webBridge]
+
+[meta webBridge.meta]
+  set: type = bridge
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Bridge symbolic runtime to external web interfaces or hosted UIs"
+[/meta webBridge.meta]
+
+[trigger boot.webBridge /]
+
+[logic webBridge.initialize]
+  > log: "🌐 [bridge] Initializing web bridge..."
+
+  [condition is.web]
+    check: ctx.runtimeSettings.web_mode == true
+    then:
+      > emit: web.sync.state
+      > emit: web.bind.ui
+      > emit: web.listen.input
+      > emit: web.draw.sync
+      > emit: web.rest.command
+  [/condition is.web]
+
+  [condition is.not.web]
+    check: ctx.runtimeSettings.web_mode != true
+    then:
+      > log: "🛑 Web bridge skipped (not in web mode)"
+  [/condition is.not.web]
+[/logic webBridge.initialize]
+
+[when boot.webBridge] > emit: webBridge.initialize [/when boot.webBridge]
+
+[/capsule boot.webBridge]
+
+[/capsule webBridge]
+
+[trigger ancestralReveal]
+  > draw.label: "🧬 Tracing ancestral memory..."
+  > emit: story.trace.lineage
+[/trigger ancestralReveal]
+
+[/capsule core0.bootloader]
+[trigger boot.start /]
+
+[logic boot.start]
+  > log: "🚧 Trigger stub for boot.start"
+[/logic boot.start]
+
+[trigger initiateMetamorphosis /]
+
+[logic initiateMetamorphosis]
+  > log: "🚧 Trigger stub for initiateMetamorphosis"
+[/logic initiateMetamorphosis]
+
+[trigger traceEcho /]
+
+[logic traceEcho]
+  > log: "🚧 Trigger stub for traceEcho"
+[/logic traceEcho]
+
+[trigger phaseOne /]
+
+[logic phaseOne]
+  > log: "🚧 Trigger stub for phaseOne"
+[/logic phaseOne]
+
+[trigger decodeRequest /]
+
+[logic decodeRequest]
+  > log: "🚧 Trigger stub for decodeRequest"
+[/logic decodeRequest]
+
+[trigger loot.exit /]
+
+[logic loot.exit]
+  > log: "🚧 Trigger stub for loot.exit"
+[/logic loot.exit]
+
+[trigger loader.bootSequence /]
+
+[logic loader.bootSequence]
+  > log: "🚧 Trigger stub for loader.bootSequence"
+[/logic loader.bootSequence]
+
+[trigger loot.detect /]
+
+[logic loot.detect]
+  > log: "🚧 Trigger stub for loot.detect"
+[/logic loot.detect]
+
+[trigger kernel.halt /]
+
+[logic kernel.halt]
+  > log: "🚧 Trigger stub for kernel.halt"
+[/logic kernel.halt]
+
+[trigger system.loadCapsules /]
+
+[logic system.loadCapsules]
+  > log: "🚧 Trigger stub for system.loadCapsules"
+[/logic system.loadCapsules]
+
+[trigger story.trace.lineage /]
+
+[logic story.trace.lineage]
+  > log: "🚧 Trigger stub for story.trace.lineage"
+[/logic story.trace.lineage]
+
+[trigger loader.init /]
+
+[logic loader.init]
+  > log: "🚧 Trigger stub for loader.init"
+[/logic loader.init]
+
+[trigger waitForQuery /]
+
+[logic waitForQuery]
+  > log: "🚧 Trigger stub for waitForQuery"
+[/logic waitForQuery]
+
+[trigger webBridge.initialize /]
+
+[logic webBridge.initialize]
+  > log: "🚧 Trigger stub for webBridge.initialize"
+[/logic webBridge.initialize]
+
+[trigger input /]
+
+[logic input]
+  > log: "🚧 Trigger stub for input"
+[/logic input]
+
+[logic emit.context.pop]
+  > emit: context.pop
+  > log: "🚧 Emit stub for context.pop"
+[/logic emit.context.pop]
+
+[logic emit.guards.load]
+  > emit: guards.load
+  > log: "🚧 Emit stub for guards.load"
+[/logic emit.guards.load]
+
+[logic emit.context.pop.frame]
+  > emit: context.pop.frame
+  > log: "🚧 Emit stub for context.pop.frame"
+[/logic emit.context.pop.frame]
+
+[logic emit.detect.loot]
+  > emit: detect.loot
+  > log: "🚧 Emit stub for detect.loot"
+[/logic emit.detect.loot]
+
+[logic emit.boot.capsuleLoader]
+  > emit: boot.capsuleLoader
+  > log: "🚧 Emit stub for boot.capsuleLoader"
+[/logic emit.boot.capsuleLoader]
+
+[logic emit.context.push.frame]
+  > emit: context.push.frame
+  > log: "🚧 Emit stub for context.push.frame"
+[/logic emit.context.push.frame]
+
+[logic emit.snapshot.restore]
+  > emit: snapshot.restore
+  > log: "🚧 Emit stub for snapshot.restore"
+[/logic emit.snapshot.restore]

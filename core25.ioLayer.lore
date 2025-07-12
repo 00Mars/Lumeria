@@ -1,0 +1,441 @@
+[capsule core25.ioLayer]
+
+# ─── INPUT LISTEN & ROUTING ─────────────────────────────────
+
+[capsule input.listen]
+[trigger input.listen /]
+[logic input.listen]
+  > memory.set input.listeners[ctx.channel] = ctx.signal
+  > draw.label: "🎙️ Listening on '{{ ctx.channel }}' → '{{ ctx.signal }}'"
+[/logic input.listen]
+[/capsule input.listen]
+
+[capsule input.receive]
+[trigger input.receive /]
+[logic input.receive]
+  - if: ctx.channel in input.listeners
+    > emit: {{ input.listeners[ctx.channel] }} ctx.value
+  - else:
+    > emit: input.fallback ctx
+[/logic input.receive]
+[/capsule input.receive]
+
+[capsule input.map]
+[trigger input.map /]
+[logic input.map]
+  > memory.set input.map[ctx.source] = ctx.target
+  > draw.label: "🧭 Mapped input '{{ ctx.source }}' → '{{ ctx.target }}'"
+[/logic input.map]
+[/capsule input.map]
+
+[capsule input.alias]
+[trigger input.alias /]
+[logic input.alias]
+  - if: ctx.word in alias.map
+    > memory.set input.cleaned = alias.map[ctx.word]
+[/logic input.alias]
+[/capsule input.alias]
+
+[capsule input.spellcheck]
+[trigger input.spellcheck /]
+[logic input.spellcheck]
+  > memory.set input.cleaned = spellcheck(input.raw)
+[/logic input.spellcheck]
+[/capsule input.spellcheck]
+
+[capsule input.queue]
+[trigger input.queue /]
+[logic input.queue]
+  > memory.list.add input.queue = ctx.data
+[/logic input.queue]
+[/capsule input.queue]
+
+[capsule input.flush]
+[trigger input.flush /]
+[logic input.flush]
+  - foreach: input.queue
+    do: > emit: input.receive item
+  > memory.clear: input.queue
+  > log: "🧹 Flushed input queue"
+[/logic input.flush]
+[/capsule input.flush]
+
+[capsule input.capture]
+[trigger input.capture /]
+[logic input.capture]
+  > draw.label: "🖐 Awaiting input: {{ ctx.prompt }}"
+  > input: {{ ctx.prompt }}
+[/logic input.capture]
+[/capsule input.capture]
+
+[capsule input.inject]
+[trigger input.inject /]
+[logic input.inject]
+  > memory.set input.raw = ctx.value
+  > emit: input.resolve
+[/logic input.inject]
+[/capsule input.inject]
+
+[capsule input.route]
+[trigger input:* /]
+[logic input.route]
+  > memory.set input.raw = input
+  > emit: input.resolve
+[/logic input.route]
+[/capsule input.route]
+
+[capsule input.resolve]
+[trigger input.resolve /]
+[logic input.resolve]
+  condition: memory.awaitingContext exists
+    do: > emit: {{ memory.awaitingContext }}.input
+  condition: not memory.awaitingContext exists
+    do:
+      > emit: input.spellcheck
+      > emit: input.process
+[/logic input.resolve]
+[/capsule input.resolve]
+
+[capsule input.process]
+[trigger input.process /]
+[logic input.process]
+  > memory.set input.cleaned = clean(input.raw)
+  > emit: input.contextualize
+  > emit: input.meta.extract
+  > memory.set lastInput = input.cleaned
+  > emit: symbolic.react
+[/logic input.process]
+[/capsule input.process]
+
+[capsule input.contextualize]
+[trigger input.contextualize /]
+[logic input.contextualize]
+  > memory.set input.context = detect.context(input.cleaned)
+  > emit: context.{{ input.context }}
+[/logic input.contextualize]
+[/capsule input.contextualize]
+
+[capsule input.meta.extract]
+[trigger input.meta.extract /]
+[logic input.meta.extract]
+  > memory.set input.meta = extract.meta(input.cleaned)
+  > log: "[🔎] Input meta: {{ input.meta }}"
+[/logic input.meta.extract]
+[/capsule input.meta.extract]
+
+[capsule input.bindContext]
+[trigger input.bindContext /]
+[logic input.bindContext]
+  > memory.set awaitingContext = ctx.context
+[/logic input.bindContext]
+[/capsule input.bindContext]
+
+[capsule input.releaseContext]
+[trigger input.releaseContext /]
+[logic input.releaseContext]
+  > memory.clear key = awaitingContext
+[/logic input.releaseContext]
+[/capsule input.releaseContext]
+
+[capsule input.fallback]
+[trigger input.fallback /]
+[logic input.fallback]
+  > memory.append input.unknown += ctx
+  > draw.label: "🧠 Unmapped input queued for learning"
+[/logic input.fallback]
+[/capsule input.fallback]
+
+# ─── OUTPUT MAPPING & TRACE ─────────────────────────────────
+
+[capsule output.map]
+[trigger output.map /]
+[logic output.map]
+  > memory.set output.map[ctx.symbolic] = ctx.external
+  > log: "🔗 Mapped '{{ ctx.symbolic }}' → '{{ ctx.external }}'"
+[/logic output.map]
+[/capsule output.map]
+
+[capsule output.send]
+[trigger output.send /]
+[logic output.send]
+  - if: ctx.symbolic in output.map
+    > emit: output.dispatch to = output.map[ctx.symbolic], value = ctx.value
+  - else:
+    > emit: output.fallback ctx.symbolic
+[/logic output.send]
+[/capsule output.send]
+
+[capsule output.dispatch]
+[trigger output.dispatch /]
+[logic output.dispatch]
+  > log: "📤 Dispatch to {{ ctx.to }} ⇢ {{ ctx.value }}"
+  > emit: output.trace.log
+[/logic output.dispatch]
+[/capsule output.dispatch]
+
+[capsule output.fallback]
+[trigger output.fallback /]
+[logic output.fallback]
+  > log: "⚠️ No output mapping for '{{ ctx }}'"
+  > draw.label: "⚠️ No external route for '{{ ctx }}'"
+[/logic output.fallback]
+[/capsule output.fallback]
+
+[capsule output.trace.log]
+[trigger output.trace.log /]
+[logic output.trace.log]
+  > memory.list.add output.log += {
+      signal: ctx.to,
+      value: ctx.value,
+      timestamp: now()
+    }
+[/logic output.trace.log]
+[/capsule output.trace.log]
+
+[capsule output.feedback.annotate]
+[trigger output.feedback.annotate /]
+[logic output.feedback.annotate]
+  > draw.label: "🧾 Output annotated (confidence: {{ ctx.confidence }})"
+[/logic output.feedback.annotate]
+[/capsule output.feedback.annotate]
+
+# ─── SENSOR FRAMEWORK ───────────────────────────────────────
+
+[capsule sensor.initialize]
+[trigger sensor.init /]
+[logic sensor.initialize]
+  > memory.set sensors.active = true
+  > draw.label: "🛰 Symbolic sensors online"
+  > emit: sensor.readAll
+[/logic sensor.initialize]
+[/capsule sensor.initialize]
+
+[capsule sensor.stream.capture]
+[trigger sensor.stream /]
+[logic sensor.stream.capture]
+  > loop.every: 5s
+    do: > emit: sensor.readAll
+[/logic sensor.stream.capture]
+[/capsule sensor.stream.capture]
+
+[capsule sensor.read.handler]
+
+[trigger sensor.read. /]
+
+[logic sensor.read.handler]
+  > log: "🔍 Reading sensor input: {{ ctx }}"
+  > memory.append: sensor.readings = ctx
+[/logic sensor.read.handler]
+
+[/capsule sensor.read.handler]
+
+[capsule sensor.readAll]
+[trigger sensor.readAll /]
+[logic sensor.readAll]
+  - foreach: sensors.types
+    do: > emit: sensor.read.{{ item }}
+  > emit: sensor.merge
+[/logic sensor.readAll]
+[/capsule sensor.readAll]
+
+[capsule sensor.read.visual]
+[trigger sensor.read.visual /]
+[logic sensor.read.visual]
+  > memory.set sensor.visual = observe("scene")
+  > log: "[👁] Visual: {{ sensor.visual }}"
+[/logic sensor.read.visual]
+[/capsule sensor.read.visual]
+
+[capsule sensor.read.mood]
+[trigger sensor.read.mood /]
+[logic sensor.read.mood]
+  > memory.set sensor.mood = memory.get("mood.current")
+  > log: "[💓] Mood: {{ sensor.mood }}"
+[/logic sensor.read.mood]
+[/capsule sensor.read.mood]
+
+[capsule sensor.read.auditory]
+[trigger sensor.read.auditory /]
+[logic sensor.read.auditory]
+  > memory.set sensor.sound = observe("audio")
+  > log: "[🎧] Sound: {{ sensor.sound }}"
+[/logic sensor.read.auditory]
+[/capsule sensor.read.auditory]
+
+[capsule sensor.read.tactile]
+[trigger sensor.read.tactile /]
+[logic sensor.read.tactile]
+  > memory.set sensor.tactile = observe("touch")
+  > log: "[✋] Touch: {{ sensor.tactile }}"
+[/logic sensor.read.tactile]
+[/capsule sensor.read.tactile]
+
+[capsule sensor.merge.context]
+[trigger sensor.merge /]
+[logic sensor.merge.context]
+  > memory.set perception =
+      merge(sensor.visual, sensor.mood, sensor.sound, sensor.tactile)
+  > log: "[🌐] Perception: {{ perception }}"
+  > emit: sensor.overlay
+[/logic sensor.merge.context]
+[/capsule sensor.merge.context]
+
+[capsule sensor.overlay]
+[trigger sensor.overlay /]
+[logic sensor.overlay]
+  > draw.overlay: content = perception
+[/logic sensor.overlay]
+[/capsule sensor.overlay]
+
+# ─── CONTEXT & SNAPSHOT UTILITIES ───────────────────────────
+
+[capsule input.snapshot]
+[trigger input.snapshot /]
+[logic input.snapshot]
+  > memory.save file = "inputs/{{ now() }}.lum" from = input
+[/logic input.snapshot]
+[/capsule input.snapshot]
+
+[capsule input.replay]
+[trigger input.replay /]
+[logic input.replay]
+  > memory.load file = ctx.file into = input
+  > emit: input.resolve
+[/logic input.replay]
+[/capsule input.replay]
+
+[capsule io.sync]
+[trigger io.sync /]
+[logic io.sync]
+  > emit: echo.sync
+  > emit: sensor.readAll
+  > emit: input.snapshot
+  > emit: output.trace.log
+[/logic io.sync]
+[/capsule io.sync]
+
+[capsule input.reflective.inject]
+[trigger input.reflect /]
+[logic input.reflective.inject]
+  > memory.set input.raw = memory.lastInput
+  > emit: input.resolve
+[/logic input.reflective.inject]
+[/capsule input.reflective.inject]
+
+[/capsule core25.ioLayer]
+[trigger context. /]
+
+[logic context.]
+  > log: "🚧 Trigger stub for context."
+[/logic context.]
+
+[trigger symbolic.react /]
+
+[logic symbolic.react]
+  > log: "🚧 Trigger stub for symbolic.react"
+[/logic symbolic.react]
+
+[logic emit.sensor.read.tactile]
+  > emit: sensor.read.tactile
+  > log: "🚧 Emit stub for sensor.read.tactile"
+[/logic emit.sensor.read.tactile]
+
+[logic emit.input.alias]
+  > emit: input.alias
+  > log: "🚧 Emit stub for input.alias"
+[/logic emit.input.alias]
+
+[logic emit.output.map]
+  > emit: output.map
+  > log: "🚧 Emit stub for output.map"
+[/logic emit.output.map]
+
+[logic emit.input.queue]
+  > emit: input.queue
+  > log: "🚧 Emit stub for input.queue"
+[/logic emit.input.queue]
+
+[logic emit.input.bindContext]
+  > emit: input.bindContext
+  > log: "🚧 Emit stub for input.bindContext"
+[/logic emit.input.bindContext]
+
+[logic emit.io.sync]
+  > emit: io.sync
+  > log: "🚧 Emit stub for io.sync"
+[/logic emit.io.sync]
+
+[logic emit.sensor.read.visual]
+  > emit: sensor.read.visual
+  > log: "🚧 Emit stub for sensor.read.visual"
+[/logic emit.sensor.read.visual]
+
+[logic emit.output.send]
+  > emit: output.send
+  > log: "🚧 Emit stub for output.send"
+[/logic emit.output.send]
+
+[logic emit.sensor.init]
+  > emit: sensor.init
+  > log: "🚧 Emit stub for sensor.init"
+[/logic emit.sensor.init]
+
+[logic emit.input.map]
+  > emit: input.map
+  > log: "🚧 Emit stub for input.map"
+[/logic emit.input.map]
+
+[logic emit.input.capture]
+  > emit: input.capture
+  > log: "🚧 Emit stub for input.capture"
+[/logic emit.input.capture]
+
+[logic emit.input.reflect]
+  > emit: input.reflect
+  > log: "🚧 Emit stub for input.reflect"
+[/logic emit.input.reflect]
+
+[logic emit.input.releaseContext]
+  > emit: input.releaseContext
+  > log: "🚧 Emit stub for input.releaseContext"
+[/logic emit.input.releaseContext]
+
+[logic emit.input.flush]
+  > emit: input.flush
+  > log: "🚧 Emit stub for input.flush"
+[/logic emit.input.flush]
+
+[logic emit.input.inject]
+  > emit: input.inject
+  > log: "🚧 Emit stub for input.inject"
+[/logic emit.input.inject]
+
+[logic emit.output.feedback.annotate]
+  > emit: output.feedback.annotate
+  > log: "🚧 Emit stub for output.feedback.annotate"
+[/logic emit.output.feedback.annotate]
+
+[logic emit.sensor.read.auditory]
+  > emit: sensor.read.auditory
+  > log: "🚧 Emit stub for sensor.read.auditory"
+[/logic emit.sensor.read.auditory]
+
+[logic emit.sensor.stream]
+  > emit: sensor.stream
+  > log: "🚧 Emit stub for sensor.stream"
+[/logic emit.sensor.stream]
+
+[logic emit.sensor.read.mood]
+  > emit: sensor.read.mood
+  > log: "🚧 Emit stub for sensor.read.mood"
+[/logic emit.sensor.read.mood]
+
+[logic emit.input.listen]
+  > emit: input.listen
+  > log: "🚧 Emit stub for input.listen"
+[/logic emit.input.listen]
+
+[logic emit.input.replay]
+  > emit: input.replay
+  > log: "🚧 Emit stub for input.replay"
+[/logic emit.input.replay]

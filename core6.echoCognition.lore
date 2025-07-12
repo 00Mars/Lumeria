@@ -1,0 +1,396 @@
+[capsule core6.echoCognition]
+
+[capsule echoCognition.boot]
+
+[trigger boot.echoCognition /]
+[trigger cognition.boot /]
+
+[logic echoCognition.boot]
+  > log: "🧠 [core6] Booting cognitive runtime loop..."
+  > emit: cognition.init
+  > emit: echoCognition.init
+  > emit: cognition.loop
+[/logic echoCognition.boot]
+
+[/capsule echoCognition.boot]
+
+[capsule echoCognition.init]
+
+[trigger cognition.init /]
+[trigger echoCognition.init /]
+
+[memory identity.trace /]
+[memory mood.state /]
+[memory mind.intent /]
+[memory mind.observation /]
+[memory cognition.tick.rate /]
+[memory cognition.tick /]
+
+[logic echoCognition.init]
+  > memory.scope: cognition
+  > memory.set cognition.active = true
+  > memory.set mind.intent = null
+  > memory.set identity.reflect = {}
+  > memory.set cognition.tick = 0
+  > memory.set cognition.tick.rate = 10s
+  > emit: cognition.ready
+  > emit: echoCognition.tick
+  > emit: echoCognition.route
+[/logic echoCognition.init]
+
+[/capsule echoCognition.init]
+
+[capsule echoCognition.route]
+
+[trigger cognition.ready /]
+[trigger cognition.loop /]
+[trigger echoCognition.route /]
+
+[logic echoCognition.route]
+  [condition cognition.ready]
+    check: ctx.signal == "cognition.ready"
+    then: > emit: cognition.loop
+  [/condition cognition.ready]
+
+  [condition cognition.loop]
+    check: ctx.signal == "cognition.loop"
+    then: > emit: cognition.tick
+  [/condition cognition.loop]
+
+  > log: "🔄 [cognition] Routing internal intent and identity"
+  > emit: identity.evaluate
+  > emit: intent.evaluate
+[/logic echoCognition.route]
+
+[/capsule echoCognition.route]
+
+[capsule echoCognition.tick]
+
+[trigger cognition.tick /]
+[trigger echoCognition.tick /]
+
+[logic echoCognition.tick]
+  > memory.set cognition.tick += 1
+  > emit: echoCognition.reflect.trace
+  > emit: cognition.dream
+  > emit: cognition.observe
+  > emit: mind.reflect
+  > emit: mood.reflect
+  > emit: identity.evaluate
+  > emit: intent.evaluate
+  > wait: 300ms
+  > delay: cognition.tick.rate
+  > emit: cognition.loop
+  > emit: echoCognition.tick
+[/logic echoCognition.tick]
+
+[/capsule echoCognition.tick]
+
+[capsule echoCognition.reflect.trace]
+
+[trigger echo.reflect /]
+[trigger echoCognition.reflect.trace /]
+
+[logic echoCognition.reflect.trace]
+  [condition echo.trace]
+    check: ctx.signal.trace exists
+    then:
+      > memory.set: cognition.echoTrace = {{signal.trace}}
+      > log: "🔁 [cognition] Echo signal reflection: {{signal.trace}}"
+  [/condition echo.trace]
+
+  > log: "🧬 [cognition] Reflecting symbolic identity and mood"
+  > emit: mind.reflect
+  > emit: mood.reflect
+[/logic echoCognition.reflect.trace]
+
+[/capsule echoCognition.reflect.trace]
+
+[capsule mind.reflect]
+
+[trigger mind.reflect /]
+
+[logic mind.reflect]
+  > log: "🧠 [mind] Reflecting cognitive state"
+  > memory.set mind.lastSnapshot = memory.export(keys = ["mind.*", "mood.*"])
+  > log: "🧠 [mind] Identity trace: {{ identity.trace }}"
+  > log: "💡 [mind] Intent: {{ mind.intent }}"
+[/logic mind.reflect]
+
+[/capsule mind.reflect]
+
+[capsule mood.reflect]
+
+[trigger mood.reflect /]
+
+[logic mood.reflect]
+  > log: "💫 [mood] Reflecting mood overlay"
+  > memory.set mood.last = {{mood.state}}
+  > draw.label: "🫀 Mood: {{ mood.state }}"
+[/logic mood.reflect]
+
+[/capsule mood.reflect]
+
+[capsule identity.evaluate]
+
+[trigger identity.evaluate /]
+
+[logic identity.evaluate]
+  [condition identity.exists]
+    check: memory.identity.snapshot exists
+    then:
+      > memory.set identity.reflect = {{memory.identity.snapshot}}
+      > log: "🪞 [identity] Snapshot loaded"
+  [/condition identity.exists]
+
+  [condition identity.missing]
+    check: not memory.identity.snapshot
+    then:
+      > memory.set identity.reflect = {
+          id: generate.uuid(),
+          created: now(),
+          traits: {}
+        }
+      > log: "🆕 [identity] Created new identity state"
+  [/condition identity.missing]
+
+  > log: "🪞 [identity] Evaluating identity trace"
+  > memory.set: identity.trace = echo.memory("identity")
+[/logic identity.evaluate]
+
+[/capsule identity.evaluate]
+
+[capsule intent.evaluate]
+
+[trigger intent.evaluate /]
+
+[logic intent.evaluate]
+  [condition desire.exists]
+    check: mind.desire exists
+    then:
+      > memory.set mind.intent = {{mind.desire}}
+      > log: "🎯 [intent] Updated from desire: {{mind.desire}}"
+  [/condition desire.exists]
+
+  [condition desire.missing]
+    check: not mind.desire
+    then:
+      > memory.set mind.intent = "observe"
+      > log: "🧘 [intent] Defaulting to intent: observe"
+  [/condition desire.missing]
+
+  > log: "🎯 [intent] Parsing symbolic intent from observation"
+  > memory.set: mind.intent = parse.intent(mind.observation)
+[/logic intent.evaluate]
+
+[/capsule intent.evaluate]
+
+[capsule cognition.dream]
+
+[trigger cognition.dream /]
+
+[logic cognition.dream]
+  [condition mood.dreamlike]
+    check: mood.state == "dreamlike"
+    then:
+      - log: "🌙 [dream] Entering echo replay loop"
+      - for.each: memory.cognition.echoTrace as echo
+        do: > emit: {{echo}}
+  [/condition mood.dreamlike]
+
+  > log: "🌙 [cognition] Dreaming recursive states"
+  > memory.set: mind.intent = fork("dream")
+[/logic cognition.dream]
+
+[/capsule cognition.dream]
+
+[capsule cognition.observe]
+
+[trigger cognition.observe /]
+
+[logic cognition.observe]
+  [condition intent.entangle]
+    check: mind.intent == "entangle"
+    then: > emit: quantum.observe
+
+  [condition intent.resonate]
+    check: mind.intent == "resonate"
+    then: > emit: mesh.sync.quantum
+
+  [condition intent.recall]
+    check: mind.intent == "recall"
+    then: > emit: cognition.dream
+
+  [condition intent.reflect]
+    check: mind.intent == "reflect"
+    then:
+      - log: "🪞 [reflect] Observing current identity"
+      - draw.label: "You are: {{identity.reflect.id}}"
+      - draw.append: identity.reflect
+
+  > log: "👁 [cognition] Observing environment for changes"
+  > memory.set: mind.observation = sensor.read()
+[/logic cognition.observe]
+
+[/capsule cognition.observe]
+
+[capsule echoCognition.externalInput]
+
+[trigger input.intent /]
+
+[logic echoCognition.externalInput]
+  - log: "📥 [intent] Received external intent: {{signal.value}}"
+  > memory.set mind.desire = {{signal.value}}
+  > emit: intent.evaluate
+[/logic echoCognition.externalInput]
+
+[/capsule echoCognition.externalInput]
+
+[capsule echo.cognition.kernel]
+
+[meta echo.cognition]
+  set: type = cognition
+  set: version = 0.5
+  set: author = system.lumeria
+  set: purpose = "Cognitive substrate for echo state evaluation, symbolic reflection, identity logic, and pulse integration"
+[/meta echo.cognition]
+
+[trigger echo.pulse /]
+[trigger identity.check /]
+[trigger identity.set /]
+[trigger echo.capture /]
+[trigger echo.recall /]
+[trigger desire.evaluate /]
+
+[memory echo.state /]
+[memory echo.memory /]
+[memory echo.trace /]
+[memory echo.identity /]
+[memory echo.desires /]
+
+[logic pulse.update]
+  > memory.set: echo.state = ctx.signal
+  > memory.append: echo.trace = ctx.signal
+  > emit: desire.evaluate
+[/logic pulse.update]
+
+[when identity.set]
+  > memory.set: echo.identity = ctx.identity
+  > log: "🆔 Identity set to {{ ctx.identity }}"
+[/when identity.set]
+
+[when identity.check]
+  [condition identity.matched]
+    check: ctx.identity == memory.echo.identity
+    then: > emit: identity.verified
+  [/condition identity.matched]
+
+  [condition identity.unmatched]
+    check: ctx.identity != memory.echo.identity
+    then: > emit: identity.mismatch
+  [/condition identity.unmatched]
+[/when identity.check]
+
+[when echo.capture]
+  > memory.append: echo.memory = ctx.capture
+  > log: "📸 Captured echo memory: {{ ctx.capture }}"
+[/when echo.capture]
+
+[when echo.recall]
+  > emit: ctx.echo.key from memory.echo.memory
+  > log: "🔁 Recalling echo memory for {{ ctx.echo.key }}"
+[/when echo.recall]
+
+[when desire.evaluate]
+  [condition desire.found]
+    check: ctx.signal in memory.echo.desires
+    then:
+      > emit: echo.react match = ctx.signal
+      > log: "❤️ Reacting to symbolic desire"
+  [/condition desire.found]
+
+  [condition desire.absent]
+    check: ctx.signal not in memory.echo.desires
+    then: > log: "💤 No matching symbolic desire"
+  [/condition desire.absent]
+[/when desire.evaluate]
+
+[ui cognition.panel]
+  > draw.label: "🧠 Echo Cognition Panel"
+  > draw.field: label = "Current State" value = memory.echo.state
+  > draw.list: source = memory.echo.trace
+  > draw.memory: source = memory.echo.memory
+  > draw.field: label = "Identity" value = memory.echo.identity
+[/ui cognition.panel]
+
+[/capsule echo.cognition.kernel]
+
+[/capsule core6.echoCognition]
+[trigger echo.react /]
+
+[logic echo.react]
+  > log: "🚧 Trigger stub for echo.react"
+[/logic echo.react]
+
+[trigger identity.verified /]
+
+[logic identity.verified]
+  > log: "🚧 Trigger stub for identity.verified"
+[/logic identity.verified]
+
+[trigger ctx.echo.key /]
+
+[logic ctx.echo.key]
+  > log: "🚧 Trigger stub for ctx.echo.key"
+[/logic ctx.echo.key]
+
+[trigger identity.mismatch /]
+
+[logic identity.mismatch]
+  > log: "🚧 Trigger stub for identity.mismatch"
+[/logic identity.mismatch]
+
+[logic emit.echo.reflect]
+  > emit: echo.reflect
+  > log: "🚧 Emit stub for echo.reflect"
+[/logic emit.echo.reflect]
+
+[logic emit.echo.capture]
+  > emit: echo.capture
+  > log: "🚧 Emit stub for echo.capture"
+[/logic emit.echo.capture]
+
+[logic emit.boot.echoCognition]
+  > emit: boot.echoCognition
+  > log: "🚧 Emit stub for boot.echoCognition"
+[/logic emit.boot.echoCognition]
+
+[logic emit.identity.set]
+  > emit: identity.set
+  > log: "🚧 Emit stub for identity.set"
+[/logic emit.identity.set]
+
+[logic emit.identity.check]
+  > emit: identity.check
+  > log: "🚧 Emit stub for identity.check"
+[/logic emit.identity.check]
+
+[logic emit.cognition.boot]
+  > emit: cognition.boot
+  > log: "🚧 Emit stub for cognition.boot"
+[/logic emit.cognition.boot]
+
+[logic emit.input.intent]
+  > emit: input.intent
+  > log: "🚧 Emit stub for input.intent"
+[/logic emit.input.intent]
+
+[logic emit.echo.recall]
+  > emit: echo.recall
+  > log: "🚧 Emit stub for echo.recall"
+[/logic emit.echo.recall]
+
+[logic emit.echo.pulse]
+  > emit: echo.pulse
+  > log: "🚧 Emit stub for echo.pulse"
+[/logic emit.echo.pulse]

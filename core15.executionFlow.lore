@@ -1,0 +1,404 @@
+[capsule core16.executionFlow]
+
+[capsule thread.start]
+[trigger thread.start /]
+[logic thread.start]
+  > memory.set: thread.id = generate.uuid
+  > memory.scope: thread.{{ thread.id }}
+  > log: "[thread] ▶️ New thread started: {{ thread.id }}"
+  > emit: {{ ctx.entrypoint }}
+[/logic thread.start]
+[/capsule thread.start]
+
+[capsule thread.run]
+[trigger thread.run /]
+[logic thread.run]
+  > memory.scope: thread.{{ ctx.threadId }}
+  > emit: {{ ctx.signal }}
+[/logic thread.run]
+[/capsule thread.run]
+
+[capsule thread.list]
+[trigger thread.list /]
+[logic thread.list]
+  > draw.label: "🧵 Active Threads:"
+  > draw.append: memory.keys(prefix="thread.")
+[/logic thread.list]
+[/capsule thread.list]
+
+[capsule thread.terminate]
+[trigger thread.terminate /]
+[logic thread.terminate]
+  > memory.clear: thread.{{ ctx.threadId }}
+  > log: "[thread] ❌ Terminated: {{ ctx.threadId }}"
+[/logic thread.terminate]
+[/capsule thread.terminate]
+
+[capsule thread.status]
+[trigger thread.status /]
+[logic thread.status]
+  > draw.label: "📌 Thread Status: {{ ctx.threadId }}"
+  > draw.append: memory.get("thread.{{ ctx.threadId }}")
+[/logic thread.status]
+[/capsule thread.status]
+
+[capsule thread.fork]
+[trigger thread.fork /]
+[logic thread.fork]
+  > memory.scope
+  > log: "[🧵] Forking symbolic thread: {{ ctx.label }}"
+  > emit: ctx.entry
+[/logic thread.fork]
+[/capsule thread.fork]
+
+[capsule thread.join]
+[trigger thread.join /]
+[logic thread.join]
+  > log: "[🧶] Joining symbolic thread: {{ ctx.label }}"
+  > memory.clear
+[/logic thread.join]
+[/capsule thread.join]
+
+[capsule thread.parallelSet]
+[trigger thread.parallelSet /]
+[logic thread.parallelSet]
+  > for.each: ctx.threads as item
+    do: > emit: thread.fork entry = item.entry label = item.label
+[/logic thread.parallelSet]
+[/capsule thread.parallelSet]
+
+[capsule schedule.at]
+[trigger schedule.at /]
+[logic schedule.at]
+  > memory.set: schedule.{{ ctx.name }}.time = ctx.time
+  > memory.set: schedule.{{ ctx.name }}.signal = ctx.signal
+  > log: "🕓 Scheduled '{{ ctx.signal }}' at {{ ctx.time }}"
+[/logic schedule.at]
+[/capsule schedule.at]
+
+[capsule schedule.every]
+[trigger schedule.every /]
+[logic schedule.every]
+  > memory.set: schedule.{{ ctx.name }}.interval = ctx.interval
+  > memory.set: schedule.{{ ctx.name }}.signal = ctx.signal
+  > log: "🔁 Recurring '{{ ctx.signal }}' every {{ ctx.interval }}"
+[/logic schedule.every]
+[/capsule schedule.every]
+
+[capsule schedule.tick]
+[trigger tick /]
+[logic schedule.tick]
+  > for.each: memory.keys(prefix="schedule.") as item
+    do:
+      > set: s = memory.get(item)
+      [condition is.scheduled]
+        check: s.time == now()
+        then:
+          > emit: {{ s.signal }}
+          > memory.clear: {{ item }}
+      [condition is.interval]
+        check: s.interval exists and now() % s.interval == 0
+        then: > emit: {{ s.signal }}
+[/logic schedule.tick]
+[/capsule schedule.tick]
+
+[capsule schedule.cancel]
+[trigger schedule.cancel /]
+[logic schedule.cancel]
+  > memory.clear: schedule.{{ ctx.name }}
+  > log: "❌ Cancelled schedule '{{ ctx.name }}'"
+[/logic schedule.cancel]
+[/capsule schedule.cancel]
+
+[capsule schedule.list]
+[trigger schedule.list /]
+[logic schedule.list]
+  > draw.label: "📆 Current Schedules:"
+  > draw.append: memory.keys(prefix="schedule.")
+[/logic schedule.list]
+[/capsule schedule.list]
+
+[capsule schedule.check]
+[trigger schedule.check /]
+[logic schedule.check]
+  > for.each: memory.schedule as item
+    do:
+      [condition due]
+        check: memory.schedule[item].time <= time.now
+        then:
+          > emit: memory.schedule[item].action
+          > memory.list.remove: item from: memory.schedule
+[/logic schedule.check]
+[/capsule schedule.check]
+
+[capsule schedule.action]
+[trigger schedule.action /]
+[logic schedule.action]
+  > log: "[🗓] Scheduling {{ ctx.action }} at {{ ctx.time }}"
+  > memory.map.set: memory.schedule[ctx.id] = {
+      time: ctx.time,
+      action: ctx.action
+    }
+[/logic schedule.action]
+[/capsule schedule.action]
+
+[capsule loop.start]
+[trigger loop.start /]
+[logic loop.start]
+  > memory.set: loop.count = 0
+  > emit: loop.tick
+[/logic loop.start]
+[/capsule loop.start]
+
+[capsule loop.tick]
+[trigger loop.tick /]
+[logic loop.tick]
+  > memory.set: loop.count = loop.count + 1
+  > emit: loop.eval phase={{ loop.count }}
+  > emit: loop.check
+  > wait: ctx.delay or 1s
+  > emit: loop.tick
+[/logic loop.tick]
+[/capsule loop.tick]
+
+[capsule loop.check]
+[trigger loop.check /]
+[logic loop.check]
+  [condition limit.reached]
+    check: loop.count > ctx.limit
+    then: > emit: loop.break
+  [condition continue]
+    check: loop.count <= ctx.limit
+    then: > emit: loop.continue
+[/logic loop.check]
+[/capsule loop.check]
+
+[capsule loop.break]
+[trigger loop.break /]
+[logic loop.break]
+  > draw.label: "⛔ Loop halted at {{ loop.count }}"
+  > emit: exit.symbolic
+[/logic loop.break]
+[/capsule loop.break]
+
+[capsule loop.continue]
+[trigger loop.continue /]
+[logic loop.continue]
+  > draw.label: "🔁 Loop phase {{ loop.count }}"
+[/logic loop.continue]
+[/capsule loop.continue]
+
+[capsule loop.phase.register]
+[trigger loop.phase.register /]
+[logic loop.phase.register]
+  > memory.set: loop.phases[ctx.name] = ctx.actions
+  > draw.label: "🌀 Registered phase: {{ ctx.name }}"
+[/logic loop.phase.register]
+[/capsule loop.phase.register]
+
+[capsule loop.phase.run]
+[trigger loop.eval /]
+[logic loop.phase.run]
+  [condition phase.known]
+    check: ctx.phase in loop.phases
+    then: > eval: loop.phases[ctx.phase]
+[/logic loop.phase.run]
+[/capsule loop.phase.run]
+
+[capsule stack.push]
+[trigger stack.push /]
+[logic stack.push]
+  > memory.list.add: ctx.value to: memory[ctx.stack or "stack.main"]
+[/logic stack.push]
+[/capsule stack.push]
+
+[capsule stack.pop]
+[trigger stack.pop /]
+[logic stack.pop]
+  > memory.set: ctx.popped = memory.list.pop from: memory[ctx.stack or "stack.main"]
+[/logic stack.pop]
+[/capsule stack.pop]
+
+[capsule stack.peek]
+[trigger stack.peek /]
+[logic stack.peek]
+  > memory.set: ctx.top = memory.list.peek from: memory[ctx.stack or "stack.main"]
+[/logic stack.peek]
+[/capsule stack.peek]
+
+[capsule stack.clear]
+[trigger stack.clear /]
+[logic stack.clear]
+  > memory.set: memory[ctx.stack or "stack.main"] = []
+[/logic stack.clear]
+[/capsule stack.clear]
+
+[capsule stack.clone]
+[trigger stack.clone /]
+[logic stack.clone]
+  > memory.set: memory[ctx.target or "stack.copy"] = memory[ctx.stack or "stack.main"]
+[/logic stack.clone]
+[/capsule stack.clone]
+
+[capsule symbolic.clock.tick]
+[trigger symbolic.clock.tick /]
+[logic symbolic.clock.tick]
+  > memory.set: time.now = timestamp()
+  > memory.set: time.ticks += 1
+  > emit: time.tick
+  > emit: schedule.check
+[/logic symbolic.clock.tick]
+[/capsule symbolic.clock.tick]
+
+[capsule clock.start]
+[trigger clock.start /]
+[logic clock.start]
+  > log: "[⏱] Starting symbolic clock"
+  > every: 1s
+    do: > emit: symbolic.clock.tick
+[/logic clock.start]
+[/capsule clock.start]
+
+[capsule clock.status]
+[trigger clock.status /]
+[logic clock.status]
+  > draw.label: "⏲️ Clock: {{ time.ticks }} ticks"
+  > draw.label: "🕒 Time: {{ time.now }}"
+  > draw.label: "🗂️ Scheduled: {{ memory.schedule.keys }}"
+[/logic clock.status]
+[/capsule clock.status]
+
+[/capsule core16.executionFlow]
+[trigger time.tick /]
+
+[logic time.tick]
+  > log: "🚧 Trigger stub for time.tick"
+[/logic time.tick]
+
+[trigger exit.symbolic /]
+
+[logic exit.symbolic]
+  > log: "🚧 Trigger stub for exit.symbolic"
+[/logic exit.symbolic]
+
+[trigger ctx.entry /]
+
+[logic ctx.entry]
+  > log: "🚧 Trigger stub for ctx.entry"
+[/logic ctx.entry]
+
+[trigger memory.schedule /]
+
+[logic memory.schedule]
+  > log: "🚧 Trigger stub for memory.schedule"
+[/logic memory.schedule]
+
+[logic emit.loop.phase.register]
+  > emit: loop.phase.register
+  > log: "🚧 Emit stub for loop.phase.register"
+[/logic emit.loop.phase.register]
+
+[logic emit.stack.push]
+  > emit: stack.push
+  > log: "🚧 Emit stub for stack.push"
+[/logic emit.stack.push]
+
+[logic emit.clock.status]
+  > emit: clock.status
+  > log: "🚧 Emit stub for clock.status"
+[/logic emit.clock.status]
+
+[logic emit.stack.pop]
+  > emit: stack.pop
+  > log: "🚧 Emit stub for stack.pop"
+[/logic emit.stack.pop]
+
+[logic emit.stack.peek]
+  > emit: stack.peek
+  > log: "🚧 Emit stub for stack.peek"
+[/logic emit.stack.peek]
+
+[logic emit.schedule.every]
+  > emit: schedule.every
+  > log: "🚧 Emit stub for schedule.every"
+[/logic emit.schedule.every]
+
+[logic emit.clock.start]
+  > emit: clock.start
+  > log: "🚧 Emit stub for clock.start"
+[/logic emit.clock.start]
+
+[logic emit.thread.join]
+  > emit: thread.join
+  > log: "🚧 Emit stub for thread.join"
+[/logic emit.thread.join]
+
+[logic emit.thread.list]
+  > emit: thread.list
+  > log: "🚧 Emit stub for thread.list"
+[/logic emit.thread.list]
+
+[logic emit.thread.parallelSet]
+  > emit: thread.parallelSet
+  > log: "🚧 Emit stub for thread.parallelSet"
+[/logic emit.thread.parallelSet]
+
+[logic emit.thread.status]
+  > emit: thread.status
+  > log: "🚧 Emit stub for thread.status"
+[/logic emit.thread.status]
+
+[logic emit.thread.start]
+  > emit: thread.start
+  > log: "🚧 Emit stub for thread.start"
+[/logic emit.thread.start]
+
+[logic emit.thread.terminate]
+  > emit: thread.terminate
+  > log: "🚧 Emit stub for thread.terminate"
+[/logic emit.thread.terminate]
+
+[logic emit.loop.start]
+  > emit: loop.start
+  > log: "🚧 Emit stub for loop.start"
+[/logic emit.loop.start]
+
+[logic emit.schedule.list]
+  > emit: schedule.list
+  > log: "🚧 Emit stub for schedule.list"
+[/logic emit.schedule.list]
+
+[logic emit.tick]
+  > emit: tick
+  > log: "🚧 Emit stub for tick"
+[/logic emit.tick]
+
+[logic emit.thread.run]
+  > emit: thread.run
+  > log: "🚧 Emit stub for thread.run"
+[/logic emit.thread.run]
+
+[logic emit.schedule.action]
+  > emit: schedule.action
+  > log: "🚧 Emit stub for schedule.action"
+[/logic emit.schedule.action]
+
+[logic emit.schedule.at]
+  > emit: schedule.at
+  > log: "🚧 Emit stub for schedule.at"
+[/logic emit.schedule.at]
+
+[logic emit.stack.clone]
+  > emit: stack.clone
+  > log: "🚧 Emit stub for stack.clone"
+[/logic emit.stack.clone]
+
+[logic emit.stack.clear]
+  > emit: stack.clear
+  > log: "🚧 Emit stub for stack.clear"
+[/logic emit.stack.clear]
+
+[logic emit.schedule.cancel]
+  > emit: schedule.cancel
+  > log: "🚧 Emit stub for schedule.cancel"
+[/logic emit.schedule.cancel]

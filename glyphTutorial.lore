@@ -1,0 +1,244 @@
+[capsule tutorial.symbolicGlyphs]
+
+[meta tutorial.metadata]
+  set: type = tutorial
+  set: version = 0.5
+  set: author = system.lumeria
+  set: purpose = "Introduce and explain core symbolic glyphs in Lumeria"
+[/meta tutorial.metadata]
+
+[trigger tutorial.launch.symbols /]
+[trigger pulse.boot /]
+
+[logic initTutorial]
+  > emit: tutorial.glyph.structural
+  > emit: tutorial.glyph.reflective
+  > emit: tutorial.glyph.operators
+  > emit: tutorial.glyph.meta
+  > emit: thread  # Patch to resolve orphan trigger
+[/logic initTutorial]
+
+[/capsule tutorial.symbolicGlyphs]
+
+[capsule tutorial.glyph.structural]
+
+[trigger tutorial.glyph.structural /]
+
+[ui glyph.structural]
+  > draw.label: "🧷 Structural Symbols"
+
+  > draw.step: title = "➤ `>` — Symbolic Action"
+    description = "`> emit: signal.name` — Initiates symbolic action."
+
+  > draw.step: title = "➖ `-` — Data Entry"
+    description = "`- draw.label: 'Hi'` — Introduces symbolic lines."
+
+  > draw.step: title = "🔗 `:` — Field Delimiter"
+    description = "`label: 'Joy'` — Used in name/value pairs."
+
+  > draw.step: title = "🟰 `=` — Assignment"
+    description = "`set: x = 5` — Assigns values symbolically."
+
+  > draw.step: title = "➡ `→` or `->` — Symbolic Pointer"
+    description = "`memory.get: user → name` — Reads from memory."
+
+  > draw.step: title = "⤴ `-^` — Recursive Pointer"
+    description = "`get: loop -^ self` — Refers back to self context."
+
+  > draw.step: title = "📦 `|` — Embedded Block"
+    description = "`memory.set: data = | capsule ... |` — Inlines capsule."
+[/ui glyph.structural]
+
+[/capsule tutorial.glyph.structural]
+
+[capsule tutorial.glyph.reflective]
+
+[trigger tutorial.glyph.reflective /]
+
+[ui glyph.reflective]
+  > draw.label: "🔮 Reflective & Fork Symbols"
+
+  > draw.step: title = "🌱 `<^>` — Reflective Bloom"
+    description = "`logic: fork <^>` — Evolves symbolic fork forward."
+
+  > draw.step: title = "🌿 `-<` — Reflective Fork"
+    description = "`emit: thread -< variant` — Spawns parallel branch."
+
+  > draw.step: title = "🪞 `^` — Echo/Superscope"
+    description = "`log: ^user.state` — Access outer context."
+[/ui glyph.reflective]
+
+[/capsule tutorial.glyph.reflective]
+
+[capsule tutorial.glyph.operators]
+
+[trigger tutorial.glyph.operators /]
+
+[ui glyph.operators]
+  > draw.label: "🧮 Symbolic Operators"
+
+  > draw.step: title = "〰 `~` — Fuzzy Match"
+    description = "`if: mood ~ 'happy'` — Loose symbolic match."
+
+  > draw.step: title = "✳ `*` — Broadcast"
+    description = "`emit: *system.signals` — Send to all receivers."
+
+  > draw.step: title = "📉 `%` — Ratio or Modulo"
+    description = "`5 % 3` — Symbolic math expression."
+
+  > draw.step: title = "↔ `..` — Range"
+    description = "`1..10` — Defines inclusive ranges."
+
+  > draw.step: title = "📛 `::` — Namespace"
+    description = "`grammar::check` — Scoped symbol reference."
+
+  > draw.step: title = "⟹ `=>` — Implication"
+    description = "`state => emit: calm` — Symbolic result from condition."
+
+  > draw.step: title = "≠ `!=` — Inequality"
+    description = "`x != y` — Compares non-equivalence."
+
+  > draw.step: title = "≡ `===` — Deep Identity"
+    description = "`a === b` — Checks structural equality."
+
+  > draw.step: title = "🔗 `&` — Logical AND"
+    description = "`x & y` — Both symbols must apply."
+
+  > draw.step: title = "⚠️ `!!` — Assertion"
+    description = "`!! locked` — Declares an enforced truth."
+
+  > draw.step: title = "… `...` — Continuation"
+    description = "`- process...` — Leaves symbolic continuation."
+[/ui glyph.operators]
+
+[/capsule tutorial.glyph.operators]
+
+[capsule tutorial.glyph.meta]
+
+[trigger tutorial.glyph.meta /]
+
+[ui glyph.meta]
+  > draw.label: "🔖 Meta & Comment Symbols"
+
+  > draw.step: title = "📍 `@` — Anchor"
+    description = "`@start` — Labels a point in logic or flow."
+
+  > draw.step: title = "🏷 `#` — Comment or Tag"
+    description = "`# note` — Adds non-executable hint or tag."
+[/ui glyph.meta]
+
+[/capsule tutorial.glyph.meta]
+
+[capsule tutorial.symbolicBlocks.modularity]
+
+[meta tutorial.modular.blocks]
+  set: type = tutorial
+  set: version = 0.5
+  set: author = system.lumeria
+  set: purpose = "Demonstrate symbolic block chaining, scoped reuse, and multi-closure logic"
+[/meta tutorial.modular.blocks]
+
+[trigger tutorial.launch.modularBlocks /]
+
+[logic modularBlocks.intro]
+  > emit: tutorial.symbolicBlockReuse
+  > emit: tutorial.namedClosures
+  > emit: tutorial.exportEmit
+[/logic modularBlocks.intro]
+
+[ui tutorial.symbolicBlockReuse]
+  > draw.label: "🧩 Modular Symbolic Blocks"
+
+  > draw.step: title = "Named Sections"
+    description = "`[logic myBlock]` declares reusable symbolic logic."
+
+  > draw.step: title = "Multiple Closures"
+    description = "Using `[/myBlock]` in multiple places shares `[myBlock]` across scopes."
+
+  > draw.step: title = "Result"
+    description = "The same logic executes, visualizes, or persists in each context."
+[/ui tutorial.symbolicBlockReuse]
+
+[ui tutorial.namedClosures]
+  > draw.label: "🔁 Named Closures Enable Cross-Scope Rendering"
+
+  > draw.step: title = "Blended Nesting"
+    description = "A block opened once can be closed in multiple locations to blend into both."
+
+  > draw.step: title = "Example"
+    description = "`[formBlock] ... [/formBlock]` can resolve in `[screenA]` and `[screenB]`."
+
+  > draw.step: title = "Why it Matters"
+    description = "Declarative presence — not procedural duplication."
+[/ui tutorial.namedClosures]
+
+[ui tutorial.exportEmit]
+  > draw.label: "🚪 Exporting & Emitting Symbolic Blocks"
+
+  > draw.step: title = "Symbolic Export"
+    description = "`[logic sharedLogic] export` makes it usable outside the capsule."
+
+  > draw.step: title = "Symbolic Import"
+    description = "`> emit: sharedLogic from: capsule.name` calls symbolic logic remotely."
+
+  > draw.step: title = "Use Cases"
+    description = "Create libraries, shared UI, symbolic behavior modules."
+[/ui tutorial.exportEmit]
+
+[/capsule tutorial.symbolicBlocks.modularity]
+[trigger tutorial.exportEmit /]
+
+[logic tutorial.exportEmit]
+  > log: "🚧 Trigger stub for tutorial.exportEmit"
+[/logic tutorial.exportEmit]
+
+[trigger tutorial.namedClosures /]
+
+[logic tutorial.namedClosures]
+  > log: "🚧 Trigger stub for tutorial.namedClosures"
+[/logic tutorial.namedClosures]
+
+[trigger calm /]
+
+[logic calm]
+  > log: "🚧 Trigger stub for calm"
+[/logic calm]
+
+[trigger signal.name /]
+
+[logic signal.name]
+  > log: "🚧 Trigger stub for signal.name"
+[/logic signal.name]
+
+[trigger tutorial.symbolicBlockReuse /]
+
+[logic tutorial.symbolicBlockReuse]
+  > log: "🚧 Trigger stub for tutorial.symbolicBlockReuse"
+[/logic tutorial.symbolicBlockReuse]
+
+[trigger sharedLogic /]
+
+[logic sharedLogic]
+  > log: "🚧 Trigger stub for sharedLogic"
+[/logic sharedLogic]
+
+[trigger thread /]
+
+[logic thread]
+  > log: "🚧 Trigger stub for thread"
+[/logic thread]
+
+[logic emit.pulse.boot]
+  > emit: pulse.boot
+  > log: "🚧 Emit stub for pulse.boot"
+[/logic emit.pulse.boot]
+
+[logic emit.tutorial.launch.symbols]
+  > emit: tutorial.launch.symbols
+  > log: "🚧 Emit stub for tutorial.launch.symbols"
+[/logic emit.tutorial.launch.symbols]
+
+[logic emit.tutorial.launch.modularBlocks]
+  > emit: tutorial.launch.modularBlocks
+  > log: "🚧 Emit stub for tutorial.launch.modularBlocks"
+[/logic emit.tutorial.launch.modularBlocks]

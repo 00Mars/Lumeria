@@ -1,0 +1,251 @@
+[capsule core2.capsuleEngine]
+
+[capsule run.symbolicRuntimeBoot]
+
+[meta engine.bootstrap]
+  set: type = runtime.engine
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Boot and queue symbolic runtime startup signals"
+[/meta engine.bootstrap]
+
+[trigger signal: run.symbolicRuntimeBoot /]
+[trigger signal: emit.* /]
+
+[logic engine.bootstrap]
+  [condition is.emit.signal]
+    check: signal startsWith "emit."
+    then:
+      > log: "[engine] Queuing signal: {{ signal }}"
+      > queue.push: execution.signals = {{ signal }}
+  [/condition is.emit.signal]
+
+  > log: "[engine] Starting symbolic runtime bootstrap"
+  > emit: engine.runNext
+[/logic engine.bootstrap]
+
+[logic engine.runNext]
+  > memory.pop: next = execution.signals
+  > condition: next exists
+    do:
+      > emit: {{ next }}
+      > emit: engine.runNext
+[/logic engine.runNext]
+
+[when signal: run.symbolicRuntimeBoot]
+  > emit: engine.bootstrap
+[/when signal: run.symbolicRuntimeBoot]
+
+[when signal: emit.*]
+  > emit: engine.bootstrap
+[/when signal: emit.*]
+
+[trigger engine.runNext /]
+
+[/capsule run.symbolicRuntimeBoot]
+
+[capsule capsule.eval]
+
+[trigger eval: capsule: {{ctx.evalCapsuleName}} /]
+
+[logic capsule.eval]
+  > memory.set: ctx.evalCapsuleName = {{ctx.evalCapsuleName}}
+  > emit: load.capsule
+  > emit: symbolic.execute
+[/logic capsule.eval]
+
+[/capsule capsule.eval]
+
+
+[capsule engine.runNext]
+
+[trigger signal: engine.runNext /]
+
+[logic engine.runNext]
+  [condition hasQueuedSignals]
+    check: queue.length(execution.signals) > 0
+    then:
+      > memory.set: engine.activeSignal = queue.pop(execution.signals)
+      > emit: engine.processTriggers
+  [/condition hasQueuedSignals]
+
+  [condition noSignals]
+    check: queue.length(execution.signals) == 0
+    then:
+      > wait: seconds = 0.1
+      > emit: engine.runNext
+  [/condition noSignals]
+[/logic engine.runNext]
+
+[when signal: engine.runNext]
+  > emit: engine.runNext
+[/when signal: engine.runNext]
+
+[/capsule engine.runNext]
+
+
+[capsule engine.processTriggers]
+
+[trigger signal: engine.processTriggers /]
+
+[logic engine.processTriggers]
+  > log: "[engine] Processing signal {{ engine.activeSignal }}"
+  > foreach: capsule.triggers
+    do:
+      > memory.set: trigger = item
+      > emit: engine.matchTrigger
+[/logic engine.processTriggers]
+
+[/capsule engine.processTriggers]
+
+
+[capsule engine.matchTrigger]
+
+[trigger signal: engine.matchTrigger /]
+
+[logic engine.matchTrigger]
+  [condition match.signal]
+    check: trigger.signal == engine.activeSignal
+    then:
+      [condition match.phase]
+        check: trigger.phase == memory.phase or trigger.phase is null
+        then:
+          [condition match.scene]
+            check: trigger.scene == memory.activeScene or trigger.scene is null
+            then:
+              [condition match.mood]
+                check: trigger.mood == memory.mood or trigger.mood is null
+                then:
+                  [condition match.condition]
+                    check: evaluate.condition == true or trigger.condition is null
+                    then:
+                      > log: "[engine] ✅ Trigger matched. Executing..."
+                      > memory.set: engine.triggerToExecute = trigger
+                      > emit: engine.executeBlock
+                  [/condition match.condition]
+              [/condition match.mood]
+          [/condition match.scene]
+      [/condition match.phase]
+  [/condition match.signal]
+
+  [condition no.match]
+    check: trigger.signal != engine.activeSignal
+    then: > log: "[engine] ⏭️ Skipping unmatched trigger"
+  [/condition no.match]
+[/logic engine.matchTrigger]
+
+[/capsule engine.matchTrigger]
+
+
+[capsule engine.executeBlock]
+
+[trigger signal: engine.executeBlock /]
+
+[logic engine.executeBlock]
+  > foreach: engine.triggerToExecute.do
+    do: > eval: {{ item }}
+  > emit: evaluate.allTriggers
+[/logic engine.executeBlock]
+
+[/capsule engine.executeBlock]
+
+
+[capsule evaluate.allTriggers]
+
+[trigger signal: evaluate.allTriggers /]
+
+[logic evaluate.allTriggers]
+  > eval: signal.matchers
+  > eval: condition.matchers
+  > emit: evaluate.condition
+[/logic evaluate.allTriggers]
+
+[/capsule evaluate.allTriggers]
+
+
+[capsule evaluate.condition]
+
+[trigger signal: evaluate.condition /]
+
+[logic evaluate.condition]
+  > log: "[eval] Comparing {{ condition.left }} {{ condition.op }} {{ condition.right }}"
+  > memory.set: condition.result = false
+
+  [condition equal]
+    check: condition.op == "=="
+    then:
+      [condition values.equal]
+        check: memory[{condition.left}] == {condition.right}
+        then: > memory.set: condition.result = true
+      [/condition values.equal]
+  [/condition equal]
+
+  [condition not.equal]
+    check: condition.op == "!="
+    then:
+      [condition values.notequal]
+        check: memory[{condition.left}] != {condition.right}
+        then: > memory.set: condition.result = true
+      [/condition values.notequal]
+  [/condition not.equal]
+
+  [condition greater]
+    check: condition.op == ">"
+    then:
+      [condition values.greater]
+        check: memory[{condition.left}] > {condition.right}
+        then: > memory.set: condition.result = true
+      [/condition values.greater]
+  [/condition greater]
+[/logic evaluate.condition]
+
+[/capsule evaluate.condition]
+
+[/capsule core2.capsuleEngine]
+[trigger engine.processTriggers /]
+
+[logic engine.processTriggers]
+  > log: "🚧 Trigger stub for engine.processTriggers"
+[/logic engine.processTriggers]
+
+[trigger engine.matchTrigger /]
+
+[logic engine.matchTrigger]
+  > log: "🚧 Trigger stub for engine.matchTrigger"
+[/logic engine.matchTrigger]
+
+[trigger load.capsule /]
+
+[logic load.capsule]
+  > log: "🚧 Trigger stub for load.capsule"
+[/logic load.capsule]
+
+[trigger engine.runNext /]
+
+[logic engine.runNext]
+  > log: "🚧 Trigger stub for engine.runNext"
+[/logic engine.runNext]
+
+[trigger engine.bootstrap /]
+
+[logic engine.bootstrap]
+  > log: "🚧 Trigger stub for engine.bootstrap"
+[/logic engine.bootstrap]
+
+[trigger evaluate.condition /]
+
+[logic evaluate.condition]
+  > log: "🚧 Trigger stub for evaluate.condition"
+[/logic evaluate.condition]
+
+[trigger engine.executeBlock /]
+
+[logic engine.executeBlock]
+  > log: "🚧 Trigger stub for engine.executeBlock"
+[/logic engine.executeBlock]
+
+[trigger evaluate.allTriggers /]
+
+[logic evaluate.allTriggers]
+  > log: "🚧 Trigger stub for evaluate.allTriggers"
+[/logic evaluate.allTriggers]

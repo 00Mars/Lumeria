@@ -1,0 +1,1242 @@
+[capsule symbolicBoot]
+
+[capsule core1.bootLoader]
+
+[capsule core1.boot.repl]
+
+[meta bootstrap.main]
+  set: type = loader
+  set: version = 0.7
+  set: author = system.lumeria
+  set: purpose = "Initialize symbolic runtime, launch entry capsule, and route into mnemonic kernel"
+[/meta bootstrap.main]
+
+[trigger go /]
+
+[logic bootstrap.runtime]
+  > log: "🌍 Initializing symbolic environment from current directory..."
+  > emit: env.scan.root
+
+  > memory.set: ctx.default_entry = "go"
+  > log: "🚀 Executing entry capsule: {{ctx.default_entry}}"
+
+  # 🔁 Patches for previously orphaned triggers
+  > emit: parse.files
+  > emit: grammar.validate
+  > emit: loader.boot
+
+  # 🔧 NEW: Route into mnemonic kernel
+  > emit: queue.push
+    ctx.signal = "boot.kernel"
+
+  > emit: kernel.loop  # ✅ Start draining runtime.queue
+
+  > loop:
+      do:
+        > input: "[⎆] Awaiting input:"
+        > memory.set: ctx.lastInput = {{input}}
+
+        [condition should.exit]
+          check: ctx.lastInput == "exit"
+          then:
+            > log: "👋 Exiting symbolic engine."
+            > emit: exit.context
+        [/condition should.exit]
+
+        # 🧠 Evaluate user-entered symbolic logic or signal
+        [condition ctx.lastInput startsWith "emit:"]
+          > let signal = ctx.lastInput.replace("emit: ", "")
+          > emit: {{ signal }}
+        [/condition]
+
+        [condition not ctx.lastInput startsWith "emit:"]
+          > emit: input: {{ ctx.lastInput }}
+        [/condition]
+
+[/logic bootstrap.runtime] 
+
+[/capsule core1.boot.repl]
+
+[capsule core1.boot.ui]
+
+[meta boot.meta]
+  set: type = runtime
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Symbolic runtime boot entrypoint and resume trigger"
+[/meta boot.meta]
+
+[trigger runtime.boot /]
+
+[logic symbolicRuntimeBoot]
+  > emit: resume.symbolic
+  > draw.label: "🌌 Welcome to lum"
+  > emit: scene.load.initial
+[/logic symbolicRuntimeBoot]
+
+[ui boot.screen]
+  > draw.label: "Boot Runtime"
+  > draw.button: "Start Symbolic Runtime" signal = runtime.boot
+[/ui boot.screen]
+
+[/capsule core1.boot.ui]
+
+[/capsule core1.bootLoader]
+
+[capsule symbolic.bootSelf]
+
+[trigger boot.self /]
+
+[logic symbolic.bootSelf]
+  > log: "🔧 Self-boot requested"
+  > emit: load.capsules
+  > emit: runtime.boot
+[/logic symbolic.bootSelf]
+
+[/capsule symbolic.bootSelf]
+
+[capsule symbolic.runtime]
+
+[trigger go /]
+
+[logic symbolic.runtime]
+  > log: "🧠 Lumeria engine activated."
+  > emit: boot.self
+  > emit: run.symbolicRuntimeBoot
+[/logic symbolic.runtime]
+
+[/capsule symbolic.runtime]
+
+[capsule capsule.provenance]
+[trigger capsule.provenance /]
+[logic capsule.provenance]
+  > memory.set: ctx.capsuleOrigin = ctx.capsuleMetadata.origin
+  > draw.label: "🧬 Capsule provenance set"
+[/logic capsule.provenance]
+[/capsule capsule.provenance]
+
+[capsule capsule.sign]
+[trigger capsule.sign /]
+[logic capsule.sign]
+  > memory.set: ctx.capsuleSigned = true
+  > draw.label: "✍️ Capsule cryptographically signed"
+[/logic capsule.sign]
+[/capsule capsule.sign]
+
+[capsule capsule.fingerprint]
+[trigger capsule.fingerprint /]
+[logic capsule.fingerprint]
+  > memory.set: ctx.fingerprint = hash(ctx.capsuleBlock)
+  > draw.label: "🔏 Capsule fingerprint: {{ ctx.fingerprint }}"
+[/logic capsule.fingerprint]
+[/capsule capsule.fingerprint]
+
+[capsule core1.parser]
+
+[meta parser.system]
+  set: type = parser
+  set: version = 0.6
+  set: author = system.lumeria
+  set: purpose = "Unified parser for all capsule-related discovery, reading, extraction, validation, and indexing."
+[/meta parser.system]
+
+[trigger scan.forCapsules /]
+[trigger parse.files /]
+[trigger parse.files.loop /]
+[trigger parse.single /]
+[trigger parse.from.file /]
+[trigger parse.multiple.blocks /]
+[trigger parse.capsule.block /]
+[trigger parse.capsules /]
+[trigger parse.metadata /]
+[trigger parse.embedded /]
+[trigger parse.complete /]
+[trigger fs.findRoot /]
+[trigger fs.parseRoot /]
+[trigger fs.parseCapsuleLines /]
+[trigger fs.extractCapsules /]
+[trigger validate.capsules /]
+[trigger capsule.search /]
+[trigger capsule.provenance /]
+[trigger capsule.fingerprint /]
+[trigger capsule.sign /]
+
+[logic fs.findArena]
+  > fs.scanUp: file=".arena"
+  > memory.set: ctx.arena = {result}
+  > emit: fs.parseRoot
+[/logic fs.findArena]
+
+[logic fs.loadRootCapsule]
+  > fs.read: path="{ctx.arena}/.arena"
+  > memory.set: ctx.rootCapsule = {result}
+  > emit: fs.parseCapsuleLines
+[/logic fs.loadRootCapsule]
+
+[logic fs.splitLines]
+  > split.lines: {ctx.rootCapsule}
+  > memory.set: ctx.rootLines = {result}
+  > emit: fs.extractCapsules
+[/logic fs.splitLines]
+
+[logic fs.extractCapsules]
+  > parse.capsules: lines={ctx.rootLines}
+  > memory.set: ctx.parsedCapsules = {result}
+  > log: "✅ Extracted {result.length} capsule blocks from root"
+[/logic fs.extractCapsules]
+
+[logic parser.scan]
+  > parse.files: type = "lum"
+  > parse.files: type = "lore"
+  > emit: parse.files.done
+[/logic parser.scan]
+
+[logic parser.init]
+  > memory.set: ctx.fileList = []
+  > loop.files: folder = ctx.rootPath, ext = {{type}}, output = ctx.fileList
+  > log: "📂 Found {{ctx.fileList|len}} {{type}} files"
+  > emit: parse.files.loop
+[/logic parser.init]
+
+[logic parser.loop]
+  [condition empty.fileList]
+    check: ctx.fileList is empty
+    then: > emit: parse.complete
+  [/condition empty.fileList]
+
+  [condition has.files]
+    check: ctx.fileList not empty
+    then:
+      > memory.set: ctx.currentFile = ctx.fileList[0]
+      > memory.list.remove: ctx.fileList[0]
+      > emit: parse.single
+      > emit: guard.enforce
+  [/condition has.files]
+[/logic parser.loop]
+
+[logic parser.single]
+  > memory.set: ctx.path = ctx.currentFile
+  > emit: parse.from.file
+  > emit: parse.files.loop
+[/logic parser.single]
+
+[logic parser.from.file]
+  > read.file: path = ctx.path, output = ctx.rawText
+  > split.blocks: ctx.rawText using = "---"
+  > memory.set: ctx.blocks = result
+  > emit: parse.multiple.blocks
+[/logic parser.from.file]
+
+[logic parser.multiple.blocks]
+  > memory.set: ctx.parsedBlocks = []
+  > loop: source = ctx.blocks as block
+    do:
+      > memory.set: ctx.capsuleBlock = block
+      > emit: parse.capsule.block
+      > memory.list.add: ctx.parsedBlocks += [ctx.currentCapsule]
+[/logic parser.multiple.blocks]
+
+[logic parser.block]
+  > memory.set: ctx.currentCapsule = {}
+  > memory.set: ctx.currentCapsule.name = {{ ctx.capsuleBlock[0] after "capsule " }}
+  > memory.set: ctx.currentCapsule.lines = ctx.capsuleBlock
+  > memory.set: ctx.currentCapsule.meta.source = ctx.path
+  > memory.set: ctx.currentCapsule.meta.line = ctx.capsuleBlock.line
+  > memory.set: ctx.fingerprintInput = ctx.capsuleBlock.join("\n")
+  > hash.sha256: input = {{ ctx.fingerprintInput }}, output = ctx.currentCapsule.meta.fingerprint
+  > memory.list.add: ctx.parsed += [ctx.currentCapsule]
+  > memory.increment: ctx.parsedCount
+[/logic parser.block]
+
+[logic parser.complete]
+  > log: "✅ Capsule parsing complete: {{ctx.parsedCount}} total"
+  > memory.set: memory.capsuleRegistry = ctx.parsed
+  > emit: hook.onload
+[/logic parser.complete]
+
+[logic validate.capsules]
+  > loop: memory.capsuleRegistry as cap
+    [condition capsule.invalid]
+      check: cap.name is null or cap.lines is empty
+      then:
+        - log: "⚠️ Invalid capsule: {{ cap.name }}"
+        > memory.append: ctx.validation.log = cap.name
+    [/condition capsule.invalid]
+[/logic validate.capsules]
+
+[logic capsule.search]
+  > memory.set: ctx.searchResults = []
+  > loop: memory.capsuleRegistry as cap
+    [condition match]
+      check: cap.lines contains ctx.query
+      then: > memory.append: ctx.searchResults = cap.name
+    [/condition match]
+[/logic capsule.search]
+
+[logic capsule.provenance]
+  > log: "🔎 Origin of capsule: {{ ctx.currentCapsule.name }} → {{ ctx.currentCapsule.meta.source }}:{{ ctx.currentCapsule.meta.line }}"
+[/logic capsule.provenance]
+
+[logic capsule.fingerprint]
+  > memory.set: ctx.fingerprintInput = ctx.currentCapsule.lines.join("\n")
+  > hash.sha256: input={{ctx.fingerprintInput}}, output=ctx.currentCapsule.meta.fingerprint
+  > log: "🔑 Fingerprint for {{ctx.currentCapsule.name}}: {{ctx.currentCapsule.meta.fingerprint}}"
+[/logic capsule.fingerprint]
+
+[logic capsule.sign]
+  [condition has.author]
+    check: ctx.author exists
+    then:
+      > memory.set: ctx.currentCapsule.meta.signature = "signed.by:{{ctx.author}}"
+      > log: "✍️ Capsule {{ctx.currentCapsule.name}} signed by {{ctx.author}}"
+  [/condition has.author]
+
+  [condition no.author]
+    check: ctx.author not exists
+    then: > log: "⚠️ No author defined. Signature skipped."
+  [/condition no.author]
+[/logic capsule.sign]
+
+[when scan.forCapsules] > emit: parser.scan [/when scan.forCapsules]
+[when parse.files] > emit: parser.init [/when parse.files]
+[when parse.files.loop] > emit: parser.loop [/when parse.files.loop]
+[when parse.single] > emit: parser.single [/when parse.single]
+[when parse.from.file] > emit: parser.from.file [/when parse.from.file]
+[when parse.multiple.blocks] > emit: parser.multiple.blocks [/when parse.multiple.blocks]
+[when parse.capsule.block] > emit: parser.block [/when parse.capsule.block]
+[when parse.complete] > emit: parser.complete [/when parse.complete]
+[when fs.findRoot] > emit: fs.findArena [/when fs.findRoot]
+[when fs.parseRoot] > emit: fs.loadRootCapsule [/when fs.parseRoot]
+[when fs.parseCapsuleLines] > emit: fs.splitLines [/when fs.parseCapsuleLines]
+[when fs.extractCapsules] > emit: fs.extractCapsules [/when fs.extractCapsules]
+[when validate.capsules] > emit: validate.capsules [/when validate.capsules]
+[when capsule.search] > emit: capsule.search [/when capsule.search]
+[when capsule.provenance] > emit: capsule.provenance [/when capsule.provenance]
+[when capsule.fingerprint] > emit: capsule.fingerprint [/when capsule.fingerprint]
+[when capsule.sign] > emit: capsule.sign [/when capsule.sign]
+
+[trigger parser.complete /]
+
+[logic parser.complete]
+  > log: "🚧 Trigger stub for parser.complete"
+[/logic parser.complete]
+
+[trigger scene.load.initial /]
+
+[logic scene.load.initial]
+  > log: "🚧 Trigger stub for scene.load.initial"
+[/logic scene.load.initial]
+
+[trigger env.scan.root /]
+
+[logic env.scan.root]
+  > log: "🚧 Trigger stub for env.scan.root"
+[/logic env.scan.root]
+
+[trigger fs.splitLines /]
+
+[logic fs.splitLines]
+  > log: "🚧 Trigger stub for fs.splitLines"
+[/logic fs.splitLines]
+
+[trigger eval /]
+
+[logic eval]
+  > log: "🚧 Trigger stub for eval"
+[/logic eval]
+
+[trigger parse.files.done /]
+
+[logic parse.files.done]
+  > log: "🚧 Trigger stub for parse.files.done"
+[/logic parse.files.done]
+
+[trigger parser.block /]
+
+[logic parser.block]
+  > log: "🚧 Trigger stub for parser.block"
+[/logic parser.block]
+
+[trigger parser.from.file /]
+
+[logic parser.from.file]
+  > log: "🚧 Trigger stub for parser.from.file"
+[/logic parser.from.file]
+
+[trigger parser.multiple.blocks /]
+
+[logic parser.multiple.blocks]
+  > log: "🚧 Trigger stub for parser.multiple.blocks"
+[/logic parser.multiple.blocks]
+
+[trigger parser.single /]
+
+[logic parser.single]
+  > log: "🚧 Trigger stub for parser.single"
+[/logic parser.single]
+
+[trigger parser.scan /]
+
+[logic parser.scan]
+  > log: "🚧 Trigger stub for parser.scan"
+[/logic parser.scan]
+
+[trigger fs.loadRootCapsule /]
+
+[logic fs.loadRootCapsule]
+  > log: "🚧 Trigger stub for fs.loadRootCapsule"
+[/logic fs.loadRootCapsule]
+
+[trigger parser.init /]
+
+[logic parser.init]
+  > log: "🚧 Trigger stub for parser.init"
+[/logic parser.init]
+
+[trigger parser.loop /]
+
+[logic parser.loop]
+  > log: "🚧 Trigger stub for parser.loop"
+[/logic parser.loop]
+
+[trigger fs.findArena /]
+
+[logic fs.findArena]
+  > log: "🚧 Trigger stub for fs.findArena"
+[/logic fs.findArena]
+
+[logic emit.parse.embedded]
+  > emit: parse.embedded
+  > log: "🚧 Emit stub for parse.embedded"
+[/logic emit.parse.embedded]
+
+[logic emit.fs.findRoot]
+  > emit: fs.findRoot
+  > log: "🚧 Emit stub for fs.findRoot"
+[/logic emit.fs.findRoot]
+
+[logic emit.go]
+  > emit: go
+  > log: "🚧 Emit stub for go"
+[/logic emit.go]
+
+[logic emit.parse.metadata]
+  > emit: parse.metadata
+  > log: "🚧 Emit stub for parse.metadata"
+[/logic emit.parse.metadata]
+
+[logic emit.parse.capsules]
+  > emit: parse.capsules
+  > log: "🚧 Emit stub for parse.capsules"
+[/logic emit.parse.capsules]
+
+[logic emit.scan.forCapsules]
+  > emit: scan.forCapsules
+  > log: "🚧 Emit stub for scan.forCapsules"
+[/logic emit.scan.forCapsules]
+
+
+
+[capsule core1.echo.signalMonitor]
+
+[meta]
+  set: type = reflective
+  set: purpose = "Echo emitted signals and flag unknowns"
+[/meta]
+
+[trigger signal: input:* /]
+
+[logic]
+
+  > let signal = signal.replace("input:", "")
+  > log: "🔎 Signal received: {{ signal }}"
+
+  [condition signal startsWith "fake."]
+    > draw.label: "⚠️ Unknown signal '{{ signal }}' detected"
+  [/condition]
+
+  [condition signal == "parse.files"]
+    > draw.label: "📂 Parsing files..."
+  [/condition]
+
+  [condition signal == "boot.kernel"]
+    > draw.label: "🧠 Booting symbolic kernel..."
+  [/condition]
+
+  [condition signal == "go"]
+    > draw.label: "🎬 Running entry capsule..."
+  [/condition]
+
+[/logic]
+
+[/capsule core1.echo.signalMonitor]
+
+
+
+[/capsule core1.parser]
+[/capsule symbolicBoot]
+
+[capsule mnemonic.kernel]
+
+[meta mnemonic.kernel]
+  set: type = execution.kernel
+  set: version = 0.1
+  set: author = system.lumeria
+  set: purpose = "Provide the lowest-level symbolic primitives for signal dispatch, memory writing, and logic dispatch"
+[/meta mnemonic.kernel]
+
+[trigger signal: boot.kernel /]
+[trigger signal: emit.* /]
+
+[logic mnemonic.kernel]
+
+  [condition is.emit]
+    check: signal startsWith "emit."
+    then:
+      > log: "[kernel] Queuing signal '{{ signal }}'"
+      > queue.push: kernel.queue = {{ signal }}
+  [/condition is.emit]
+
+  [condition is.boot]
+    check: signal == "boot.kernel"
+    then:
+      > memory.set: kernel.queue = ["runtime.start"]
+      > log: "[kernel] Booting symbolic kernel"
+      > emit: kernel.next
+  [/condition is.boot]
+
+[/logic mnemonic.kernel]
+
+[when signal: emit.*]
+  > emit: kernel.next
+[/when signal: emit.*]
+
+[when signal: boot.kernel]
+  > emit: kernel.next
+[/when signal: boot.kernel]
+
+[/capsule mnemonic.kernel]
+
+[capsule mnemonic.loader]
+
+[meta mnemonic.loader]
+  set: type = io.loader
+  set: version = 0.1
+  set: author = system.lumeria
+  set: purpose = "Load capsules from SD, EEPROM, or embedded storage"
+[/meta mnemonic.loader]
+
+[trigger signal: runtime.start /]
+
+[logic loader.init]
+  > log: "[loader] Scanning for boot capsule set..."
+  > memory.scan: path = "/capsules/"
+  > emit: loader.load
+
+[/logic loader.init]
+
+[trigger signal: loader.load /]
+
+[logic loader.load]
+  > log: "[loader] Reading capsule files"
+  > memory.read.all: into = kernel.capsules
+  > emit: parser.scan
+[/logic loader.load]
+
+[/capsule mnemonic.loader]
+
+[capsule parser.symbolic.blockExtractor]
+
+[meta]
+  set: type = parser
+  set: version = 1.1
+  set: author = system.lumeria
+  set: purpose = "Symbolically extract capsule subblocks from raw text"
+[/meta]
+
+[trigger signal: parse.capsule.blocks /]
+
+[logic]
+
+  > let raw = ctx.text
+  > memory.set: parser.extracted = []
+
+  > let lines = split: raw by "\n"
+  > let currentCapsule = ""
+  > let currentBlock = {}
+  > let insideBlock = false
+
+[foreach line in lines]
+
+  [condition [startsWith line "[capsule "]]]
+    > let capsuleName = extract.between: line from "[capsule " to "]"
+    > currentCapsule = capsuleName
+    > continue
+  [/condition]
+
+  [condition [or 
+    [startsWith line "[logic "]]
+    [startsWith line "[trigger "]]
+    [startsWith line "[meta"]]
+    [startsWith line "[ui "]]
+  ]]
+    > insideBlock = true
+    > currentBlock = {
+        capsule: currentCapsule,
+        type: [if [startsWith line "[logic "]] then "logic"
+               else if [startsWith line "[trigger "]] then "trigger"
+               else if [startsWith line "[meta"]] then "meta"
+               else if [startsWith line "[ui "]] then "ui",
+        id: extract.between: line from " " to "]",
+               
+
+    }
+    > continue
+  [/condition]
+
+  [condition [and insideBlock [startsWith line "[/"]]]]
+    > memory.list.add: parser.extracted = currentBlock
+    > insideBlock = false
+    > currentBlock = {}
+    > continue
+  [/condition]
+
+  [condition insideBlock]
+    > currentBlock.content += line + "\n"
+  [/condition]
+
+[/foreach]
+
+
+  > memory.set: parser.blocks = parser.extracted
+  > return: parser.blocks
+
+[/logic]
+
+[/capsule parser.symbolic.blockExtractor]
+
+[capsule trigger.symbolic.mapper]
+
+[meta trigger.mapper]
+  set: type = logic.router
+  set: version = 1.0
+  set: author = system.lumeria
+  set: purpose = "Symbolically match emitted signals to block definitions parsed from capsules"
+[/meta trigger.mapper]
+
+[trigger signal: trigger.map /]
+
+[logic trigger.map]
+
+  > log: "[trigger] Mapping signals to trigger blocks"
+  > memory.set: trigger.matches = []
+
+  [foreach block in parser.blocks]
+    [condition block.type == "trigger"]
+      [foreach signal in runtime.queue]
+        [condition signal == block.content or block.content == "*"]
+          > memory.list.add: trigger.matches = {
+              capsule: block.capsule,
+              signal: signal,
+              type: "trigger",
+              content: block.content
+            }
+        [/condition]
+      [/foreach]
+    [/condition]
+  [/foreach]
+
+  > emit: logic.queue
+
+[/logic trigger.map]
+
+[/capsule trigger.symbolic.mapper]
+
+[capsule logic.symbolic.dispatcher]
+
+[meta logic.dispatcher]
+  set: type = logic.dispatch
+  set: version = 1.0
+  set: author = system.lumeria
+  set: purpose = "Symbolically queue and execute logic blocks from mapped trigger matches"
+[/meta logic.dispatcher]
+
+[trigger signal: logic.queue /]
+[trigger signal: logic.runNext /]
+
+[logic logic.queue]
+  > log: "[logic] Queueing logic from matched triggers"
+  > memory.set: execution.logicQueue = []
+
+  [foreach match in trigger.matches]
+    [foreach block in parser.blocks]
+      [condition block.capsule == match.capsule]
+      [condition block.type == "logic"]
+        > memory.list.add: execution.logicQueue = {
+            capsule: block.capsule,
+            logic: block.content
+          }
+      [/condition]
+      [/condition]
+    [/foreach]
+  [/foreach]
+
+  > emit: logic.runNext
+
+[/logic logic.queue]
+
+[logic logic.runNext]
+
+  [condition memory.execution.logicQueue.length == 0]
+    > log: "[logic] No more logic blocks to run"
+    > emit: runtime.awaitInput
+    > stop
+  [/condition]
+
+  > memory.pop: execution.logicQueue -> ctx.next
+  > log: "⚙️ Executing: {{ ctx.next.capsule }}"
+
+  # 🔁 In full implementation, you would eval `ctx.next.logic`
+  > draw.label: "🔧 Logic: {{ ctx.next.logic | slice:0:120 }}..."
+
+  > emit: logic.runNext
+
+[/logic logic.runNext]
+
+[/capsule logic.symbolic.dispatcher]
+
+[capsule capsule.executeBlock]
+
+[meta capsule.executeBlock]
+  set: type = execution.dynamic
+  set: version = 1.0
+  set: purpose = "Direct executor for symbolic blocks by capsule + id"
+[/meta]
+
+[trigger signal: capsule.executeBlock /]
+
+[logic]
+  > let capsule = ctx.capsule
+  > let type = ctx.type
+  > let id = ctx.id
+
+  > let block = memory.get: capsules.{{ capsule }}.{{ type }}.{{ id }}
+  > condition: block is null
+    do:
+      > log: "⚠️ Cannot find block {{ id }} in {{ capsule }}"
+      > stop
+  > condition: block is not null
+    do:
+      > log: "🧠 Invoking inline: {{ capsule }} :: {{ id }}"
+      > eval: {{ block }}
+[/logic]
+
+[/capsule capsule.executeBlock]
+
+[capsule logic.eval.inline]
+
+[meta logic.eval]
+  set: type = logic.executor
+  set: version = 2.0
+  set: author = system.lumeria
+  set: purpose = "Safely evaluate symbolic logic blocks with runtime guardrails and recursion tracking"
+[/meta logic.eval]
+
+[trigger signal: logic.invoke /]
+
+[logic]
+
+  # 🔐 Set recursion cap and track depth
+  [condition not memory.runtime.depth exists]
+    > memory.set: runtime.depth = 0
+  [/condition]
+
+  > let depth = memory.get: runtime.depth
+  > memory.set: runtime.depth = {{ depth + 1 }}
+
+  [condition depth > 100]
+    > log: "🧨 Maximum recursion depth exceeded ({{ depth }})"
+    > emit: kernel.halt
+    > stop
+  [/condition]
+
+  > log: "🧠 Invoking logic block (depth {{ depth }})..."
+
+  [condition ctx.next exists and ctx.next.logic exists]
+    > eval.sandboxed: {{ ctx.next.logic }}
+  [/condition]
+
+  [condition not ctx.next.logic exists]
+    > log: "⚠️ No logic block found to execute."
+  [/condition]
+
+  # 🧹 Clean up after execution
+  > memory.set: runtime.depth = {{ depth }}
+
+[/logic]
+
+[/capsule logic.eval.inline]
+
+[capsule mnemonic.ui]
+
+[meta mnemonic.ui]
+  set: type = ui.renderer
+  set: version = 0.1
+  set: author = system.lumeria
+  set: purpose = "Symbolic rendering layer for Lumeria interface draw calls"
+[/meta mnemonic.ui]
+
+[trigger signal: draw.label /]
+[trigger signal: draw.input /]
+[trigger signal: draw.log /]
+[trigger signal: draw.list /]
+[trigger signal: draw.chart /]
+
+[logic draw.label]
+  > log: "🖋️ {{ ctx.label }}"
+[/logic draw.label]
+
+[logic draw.input]
+  > log: "⌨️ Awaiting input..."
+  > emit: runtime.awaitInput
+[/logic draw.input]
+
+[logic draw.log]
+  > log: "📜 Log: {{ memory[ctx.source] }}"
+[/logic draw.log]
+
+[logic draw.list]
+  > log: "📋 List: {{ memory[ctx.source] }}"
+[/logic draw.list]
+
+[logic draw.chart]
+  > log: "📊 Chart from: {{ ctx.source }} (rendering stub)"
+[/logic draw.chart]
+
+[/capsule mnemonic.ui]
+
+[capsule core0.kernel.memory]
+
+[meta memory.symbolic.kernel]
+  set: type = system.memory
+  set: version = 1.0
+  set: author = system.lumeria
+  set: purpose = "Unified symbolic memory pool for boot kernel and runtime signals"
+[/meta memory.symbolic.kernel]
+
+[trigger signal: memory.init /]
+[trigger signal: memory.get.* /]
+[trigger signal: memory.set.* /]
+
+[logic memory.init]
+  > memory.set: runtime.signals = []
+  > memory.set: runtime.state = "idle"
+  > memory.set: kernel.boot.counter = 0
+  > memory.set: kernel.history = []
+  > log: "🧠 Kernel memory initialized"
+[/logic memory.init]
+
+[logic memory.set.generic]
+  [condition signal startsWith "memory.set."]
+    > let key = signal.replace("memory.set.", "")
+    > memory.set: {{ key }} = ctx.value
+    > draw.label: "💾 Set: {{ key }} = {{ ctx.value }}"
+    > memory.list.add: kernel.history = "SET {{ key }}"
+  [/condition]
+[/logic memory.set.generic]
+
+[logic memory.get.generic]
+  [condition signal startsWith "memory.get."]
+    > let key = signal.replace("memory.get.", "")
+    > let value = memory.get: {{ key }}
+    > draw.label: "📤 Retrieved: {{ key }} = {{ value }}"
+    > memory.list.add: kernel.history = "GET {{ key }}"
+  [/condition]
+[/logic memory.get.generic]
+
+[when signal: memory.init]
+  > emit: kernel.boot.checkpoint
+[/when]
+
+[when signal: memory.set.*]
+  > emit: memory.set.generic
+[/when]
+
+[when signal: memory.get.*]
+  > emit: memory.get.generic
+[/when]
+
+[/capsule core0.kernel.memory]
+
+[capsule core0.kernel.clock]
+
+[meta]
+  set: type = kernel.logic
+  set: version = 1.0
+  set: author = system.lumeria
+  set: purpose = "Pulse the symbolic execution clock and drain the signal queue"
+[/meta]
+
+[trigger signal: kernel.tick /]
+
+[logic]
+  > log: "🕰️ Ticking the kernel..."
+  > forEach: signal in runtime.queue
+    do:
+      > emit: {{ signal }}
+  > memory.clear: runtime.queue
+  > emit: kernel.tick  # loop until stopped
+[/logic]
+
+[/capsule core0.kernel.clock]
+
+
+[capsule core0.kernel.halt]
+
+[meta]
+  set: type = kernel.logic
+  set: version = 1.0
+  set: purpose = "Halt symbolic runtime"
+[/meta]
+
+[trigger signal: kernel.halt /]
+
+[logic]
+  > log: "🛑 Kernel halted. Final memory snapshot:"
+  > draw.list: source = runtime.memory
+  > draw.label: "🧠 Goodbye from the mnemonic runtime."
+[/logic]
+
+[/capsule core0.kernel.halt]
+
+
+[capsule core0.kernel.reset]
+
+[meta]
+  set: type = kernel.logic
+  set: purpose = "Reset symbolic memory and reinitialize kernel"
+[/meta]
+
+[trigger signal: kernel.reset /]
+
+[logic]
+  > log: "🔄 Resetting symbolic kernel..."
+  > memory.clear: runtime.memory
+  > memory.clear: runtime.queue
+  > emit: kernel.boot
+[/logic]
+
+[/capsule core0.kernel.reset]
+
+[capsule core0.kernel.gpio]
+
+[meta]
+  set: type = hardware.io
+  set: version = 0.1
+  set: author = system.lumeria
+  set: purpose = "Symbolic output to hardware pins via GPIO abstraction"
+[/meta]
+
+[trigger signal: gpio.emit /]
+[trigger signal: gpio.read /]
+
+[logic gpio.emit]
+  > let pin = ctx.pin
+  > let value = ctx.value
+  > log: "📡 GPIO Emit → Pin {{ pin }} = {{ value }}"
+  > draw.label: "📤 Pin {{ pin }} = {{ value }}"
+  > memory.set: gpio.out.{{ pin }} = {{ value }}
+[/logic gpio.emit]
+
+[logic gpio.read]
+  > let pin = ctx.pin
+  > let value = memory.get: gpio.in.{{ pin }}
+  > draw.label: "📥 Pin {{ pin }} read = {{ value }}"
+  > memory.set: gpio.last_read = {{ value }}
+[/logic gpio.read]
+
+[/capsule core0.kernel.gpio]
+
+[capsule core0.kernel.fpga]
+
+[meta]
+  set: type = hardware.logic
+  set: version = 0.1
+  set: author = system.lumeria
+  set: purpose = "Symbolic signal router to reconfigurable logic grid"
+[/meta]
+
+[trigger signal: fpga.emit /]
+[trigger signal: fpga.reconfig /]
+
+[logic fpga.emit]
+  > let slot = ctx.slot
+  > let signal = ctx.signal
+  > log: "🔀 FPGA emit → Slot {{ slot }} = {{ signal }}"
+  > memory.set: fpga.grid.{{ slot }} = {{ signal }}
+[/logic fpga.emit]
+
+[logic fpga.reconfig]
+  > let region = ctx.region
+  > let config = ctx.bitstream
+  > log: "🧬 Reconfiguring FPGA region {{ region }}"
+  > memory.set: fpga.config.{{ region }} = {{ config }}
+[/logic fpga.reconfig]
+
+[/capsule core0.kernel.fpga]
+
+[capsule core0.kernel.ui]
+
+[meta]
+  set: type = kernel.ui
+  set: version = 1.0
+  set: author = system.lumeria
+  set: purpose = "Draw symbolic runtime state and capsule scenes"
+[/meta]
+
+[trigger signal: ui.refresh /]
+[trigger signal: ui.scene /]
+
+[logic ui.refresh]
+  > draw.label: "📊 Runtime State"
+  > draw.keyvalue: source = runtime.memory
+  > draw.list: source = kernel.history
+  > draw.chart: source = gpio.out.*
+  > draw.log: source = runtime.signals
+[/logic ui.refresh]
+
+[logic ui.scene]
+  > let name = ctx.scene
+  > draw.scene: name = {{ name }}
+  > draw.label: "🪟 Active scene: {{ name }}"
+  > memory.set: runtime.scene = {{ name }}
+[/logic ui.scene]
+
+[/capsule core0.kernel.ui]
+
+[capsule core0.kernel.echo]
+
+[meta]
+  set: type = cognitive.reflect
+  set: version = 1.0
+  set: author = system.lumeria
+  set: purpose = "Echo symbolic context back as reflection"
+[/meta]
+
+[trigger signal: echo.context /]
+
+[logic]
+  > draw.label: "🔍 Reflecting current context..."
+  > draw.log: source = ctx
+  > draw.label: "🧠 Scene: {{ memory.runtime.scene }}"
+[/logic]
+
+[/capsule core0.kernel.echo]
+
+[capsule core0.kernel.queue]
+
+[meta]
+  set: type = kernel.queue
+  set: version = 1.0
+  set: author = system.lumeria
+  set: purpose = "Manage symbolic signal queue and stepwise processing"
+[/meta]
+
+[trigger signal: queue.push /]
+[trigger signal: queue.step /]
+
+[logic queue.push]
+  > let signal = ctx.signal
+  > memory.list.add: runtime.queue = {{ signal }}
+  > log: "📥 Queued signal: {{ signal }}"
+[/logic queue.push]
+
+[logic queue.step]
+  > let next = memory.list.shift: runtime.queue
+  > condition: next is not null
+    do:
+      > log: "⏩ Stepping signal: {{ next }}"
+      > emit: {{ next }}
+  > condition: next is null
+    do:
+      > log: "⛔ Queue empty. No signals to run."
+[/logic queue.step]
+
+[/capsule core0.kernel.queue]
+
+[capsule core0.kernel.loop]
+
+[meta]
+  set: type = kernel.runtime
+  set: version = 1.0
+  set: author = system.lumeria
+  set: purpose = "Drive tick loop to keep kernel running"
+[/meta]
+
+[trigger signal: kernel.loop /]
+
+[logic]
+  > emit: queue.step
+  > delay.ms: 50
+  > emit: kernel.loop
+[/logic]
+
+[/capsule core0.kernel.loop]
+
+[capsule core0.kernel.input]
+
+[meta]
+  set: type = kernel.io
+  set: version = 1.0
+  set: purpose = "Read symbolic input and enqueue to execution queue"
+[/meta]
+
+[trigger signal: input /]
+
+[logic]
+  > let user_signal = ctx.signal
+  > log: "⌨️ Received signal input: {{ user_signal }}"
+  > emit: queue.push
+    ctx.signal = {{ user_signal }}
+[/logic]
+
+[/capsule core0.kernel.input]
+
+[capsule core0.kernel.inject]
+
+[meta]
+  set: type = kernel.io
+  set: version = 1.0
+  set: purpose = "Inject memory or capsule data from file"
+[/meta]
+
+[trigger signal: memory.load /]
+
+[logic]
+  > let file = ctx.file
+  > memory.load: from = {{ file }} into = runtime.memory
+  > log: "💾 Loaded runtime memory from {{ file }}"
+[/logic]
+
+[/capsule core0.kernel.inject]
+
+[capsule core0.kernel.learn]
+
+[meta]
+  set: type = cognitive.learning
+  set: purpose = "Inject a new capsule from raw symbolic input"
+[/meta]
+
+[trigger signal: capsule.inject /]
+
+[logic]
+  > let source = ctx.code
+  > memory.list.add: runtime.injected_capsules = {{ source }}
+  > emit: capsule.parse
+    ctx.code = {{ source }}
+  > log: "🧬 Injected new capsule into runtime"
+[/logic]
+
+[/capsule core0.kernel.learn]
+
+[capsule loader.scan.toMemory]
+
+[meta]
+  set: type = io.loader
+  set: version = 1.0
+  set: author = system.lumeria
+  set: purpose = "Scan capsule files and load blocks into memory.capsules"
+[/meta]
+
+[trigger signal: loader.scan.toMemory /]
+
+[logic]
+  > log: "[loader] Scanning capsule files from /capsules/"
+
+  > memory.set: memory.capsules = {}
+
+  > memory.scan.files: path = "/capsules/" ext = ".lore"
+    -> ctx.files
+
+  [foreach file in ctx.files]
+    > memory.read: file = {{ file }} -> ctx.raw
+
+    > emit: parser.extractCapsules
+      ctx.text = {{ ctx.raw }}
+  [/foreach]
+
+  > log: "[loader] Capsule memory load complete."
+  > emit: memory.init
+[/logic]
+
+[/capsule loader.scan.toMemory]
+
+[capsule core0.kernel.boot.mnemonic]
+
+[meta]
+  set: type = kernel.boot
+  set: version = 1.0
+  set: author = system.lumeria
+  set: mnemonic = "sense → recall → bind → emit → reflect → loop"
+  set: purpose = "Full mnemonic boot chain for symbolic OS startup"
+[/meta]
+
+[trigger signal: kernel.boot /]
+
+[logic]
+
+  > log: "🧠 Step 1: Sense → Initializing sensory input stream"
+  > memory.set: kernel.sense = ready
+
+  > log: "🧠 Step 2: Recall → Loading persistent state memory"
+  > emit: memory.load
+    ctx.file = "lumeria.boot.mem"
+
+  > log: "🧠 Step 3: Bind → Linking runtime components"
+  > emit: capsule.inject
+    ctx.code = memory.get: runtime.kernel.bindCapsules
+
+  > log: "🧠 Step 4: Emit → Starting first symbolic signal"
+  > emit: queue.push
+    ctx.signal = "go"
+
+  > log: "🧠 Step 5: Reflect → Launching scene + cognition state"
+  > emit: ui.scene
+    ctx.scene = "kernel.boot.mnemonic"
+
+  > log: "🧠 Step 6: Loop → Begin symbolic execution loop"
+  > emit: kernel.loop
+
+[/logic]
+
+[/capsule core0.kernel.boot.mnemonic]
+
+[capsule parser.extractCapsules]
+
+[meta]
+  set: type = parser
+  set: version = 1.0
+  set: purpose = "Extract logic blocks from raw capsule text into memory"
+[/meta]
+
+[trigger signal: parser.extractCapsules /]
+
+[logic]
+  > let text = ctx.text
+  > let blocks = parse.capsule.blocks(text)
+
+  [foreach block in blocks]
+    > let name  = block.capsule
+    > let type  = block.type
+    > let id    = block.id
+    > let body  = block.content
+
+    > memory.set: capsules.{{ name }}.{{ type }}.{{ id }} = {{ body }}
+  [/foreach]
+
+  > log: "[parser] Extracted {{ blocks.length }} logic blocks."
+[/logic]
+
+[/capsule parser.extractCapsules]
+
+

@@ -1,0 +1,507 @@
+[capsule core23.bridgeLayer]
+
+[capsule bridge.open]
+[trigger bridge.open /]
+[logic bridge.open]
+  > draw.label: "🌉 Opening symbolic bridge..."
+  > memory.set bridge.active = true
+  > emit: net.announce
+  > emit: device.camera.capture  # Patch to resolve orphan trigger
+[/logic bridge.open]
+[/capsule bridge.open]
+
+[capsule net.announce]
+[trigger net.announce /]
+[logic net.announce]
+  > memory.set peer.id = generate.uid
+  > memory.set peer.status = "online"
+  > emit: net.broadcast
+[/logic net.announce]
+[/capsule net.announce]
+
+[capsule net.broadcast]
+[trigger net.broadcast /]
+[logic net.broadcast]
+  > memory.set net.outgoing = ctx.message or "🛰️ Hello from {{ peer.id }}"
+  > net.send: destination = "all", data = net.outgoing
+[/logic net.broadcast]
+[/capsule net.broadcast]
+
+[capsule net.receive]
+[trigger net.receive /]
+[logic net.receive]
+  > draw.label: "📡 Received: {{ ctx.data }}"
+  > memory.set net.incoming = ctx.data
+  > emit: net.react
+  > memory.set: peer.lastSeen[ctx.sender] = now()
+[/logic net.receive]
+[/capsule net.receive]
+
+[capsule net.react]
+[trigger net.react /]
+[logic net.react]
+  [condition echo]
+    check: net.incoming contains "echo"
+    then: > emit: echo.response
+  [/condition echo]
+  [condition ping]
+    check: net.incoming contains "ping"
+    then: > net.send: destination = ctx.sender, data = "pong"
+  [/condition ping]
+[/logic net.react]
+[/capsule net.react]
+
+[capsule net.pingAll]
+[trigger net.pingAll /]
+[logic net.pingAll]
+  - foreach: memory.peers
+    do: > net.send: destination = {{ item }} data = "ping"
+  > log: "[🌐] Ping sent to {{ length(memory.peers) }} peers"
+[/logic net.pingAll]
+[/capsule net.pingAll]
+
+[capsule net.peerSweep]
+[trigger every.2m.peerSweep /]
+[logic net.peerSweep]
+  - foreach: memory.peer.lastSeen
+    do:
+      [condition stale]
+        check: now() - memory.peer.lastSeen[item] > 120_000
+        then:
+          > log.warn: "⏰ Peer {{ item }} timed-out"
+          > memory.remove: peers = item
+  > draw.label: "👥 Active peers: {{ length(memory.peers) }}"
+[/logic net.peerSweep]
+[/capsule net.peerSweep]
+
+[capsule network.send]
+[trigger network.send /]
+[logic network.send]
+  > memory.set payload = {
+      type: "signal",
+      signal: ctx.signal,
+      memory: memory.snapshot(),
+      timestamp: now()
+    }
+  > emit: network.transmit
+[/logic network.send]
+[/capsule network.send]
+
+[capsule network.transmit]
+[trigger network.transmit /]
+[logic network.transmit]
+  > draw.label: "📡 Transmitting signal '{{ payload.signal }}' to {{ ctx.target }}"
+  > remote.send to=ctx.target data=payload
+[/logic network.transmit]
+[/capsule network.transmit]
+
+[capsule network.receive]
+[trigger network.receive /]
+[logic network.receive]
+  [condition valid]
+    check: ctx.data.type == "signal" and ctx.data.signal exists
+    then: > emit: network.accept
+    else: > log.error: "❌ Dropped malformed packet"
+[/logic network.receive]
+[/capsule network.receive]
+
+[capsule network.accept]
+[trigger network.accept /]
+[logic network.accept]
+  > memory.set remoteSignal = ctx.data.signal
+  > memory.merge memory = ctx.data.memory
+  > emit: {{ memory.remoteSignal }}
+[/logic network.accept]
+[/capsule network.accept]
+
+[capsule network.broadcast]
+[trigger network.broadcast /]
+[logic network.broadcast]
+  - foreach: memory.peers
+    do: > emit: network.send target={{ item }} signal={{ ctx.signal }}
+[/logic network.broadcast]
+[/capsule network.broadcast]
+
+[capsule network.syncCapsule]
+[trigger network.syncCapsule /]
+[logic network.syncCapsule]
+  > memory.set capsuleData = get.capsule(ctx.id)
+  > emit: remote.send to=ctx.target data=capsuleData
+[/logic network.syncCapsule]
+[/capsule network.syncCapsule]
+
+[capsule remote.send]
+[trigger remote.send /]
+[logic remote.send]
+  > draw.label: "🛰 Sending to {{ ctx.to }}: {{ ctx.data.signal }}"
+[/logic remote.send]
+[/capsule remote.send]
+
+[capsule bridge.healthCheck]
+[trigger every.30s.bridgePing /]
+[logic bridge.healthCheck]
+  [condition inactive]
+    check: bridge.active != true
+    then: > log.warn: "⚠️  Bridge inactive – attempting reopen"
+  [/condition inactive]
+  > emit: net.pingAll
+[/logic bridge.healthCheck]
+[/capsule bridge.healthCheck]
+
+[capsule web.ready]
+[trigger web.ready /]
+[logic web.ready]
+  > log: "[🌐] Web bridge active"
+  > emit: web.dom.inject
+[/logic web.ready]
+[/capsule web.ready]
+
+[capsule web.dom.inject]
+[trigger web.dom.inject /]
+[logic web.dom.inject]
+  > draw.append:
+      tag: div
+      id: "symbolic-output"
+      children:
+        - tag: h1
+          text: "🌐 Symbolic Web Interface Ready"
+        - tag: div
+          id: "liveStatus"
+          text: "Awaiting symbolic signals..."
+[/logic web.dom.inject]
+[/capsule web.dom.inject]
+
+[capsule web.form.submit]
+[trigger web.form.submit /]
+[logic web.form.submit]
+  > memory.set form.data = ctx.form
+  > emit: web.route.byForm
+[/logic web.form.submit]
+[/capsule web.form.submit]
+
+[capsule web.route.byForm]
+[trigger web.route.byForm /]
+[logic web.route.byForm]
+  > log: "[📬] Form submission received"
+  > memory.set activeFormRoute = form.data.route
+  > emit: run.{{ activeFormRoute }}
+[/logic web.route.byForm]
+[/capsule web.route.byForm]
+
+[capsule web.fetch.get]
+[trigger web.fetch.get /]
+[logic web.fetch.get]
+  > fetch:
+      method: GET
+      url: ctx.url
+      headers: ctx.headers
+      output: web.response
+  > emit: web.fetch.result
+[/logic web.fetch.get]
+[/capsule web.fetch.get]
+
+[capsule web.fetch.post]
+[trigger web.fetch.post /]
+[logic web.fetch.post]
+  > fetch:
+      method: POST
+      url: ctx.url
+      headers: ctx.headers
+      body: ctx.body
+      output: web.response
+  > emit: web.fetch.result
+[/logic web.fetch.post]
+[/capsule web.fetch.post]
+
+[capsule web.fetch.result]
+[trigger web.fetch.result /]
+[logic web.fetch.result]
+  [condition httpError]
+    check: web.response.status >= 400
+    then:
+      > log.error: "🌐 HTTP {{ web.response.status }} on {{ web.response.url }}"
+      > draw.label: "🚨 Fetch failed ({{ web.response.status }})"
+    else: > emit: web.fetch.success
+[/logic web.fetch.result]
+[/capsule web.fetch.result]
+
+[capsule web.fetch.success]
+[trigger web.fetch.success /]
+[logic web.fetch.success]
+  > memory.set last.webPayload = web.response.body
+  > draw.label: "✅ Web payload stored"
+[/logic web.fetch.success]
+[/capsule web.fetch.success]
+
+[capsule web.dom.update]
+[trigger web.dom.update /]
+[logic web.dom.update]
+  > draw.replace:
+      id: ctx.id
+      tag: ctx.tag
+      text: ctx.text
+[/logic web.dom.update]
+[/capsule web.dom.update]
+
+[capsule web.dom.clear]
+[trigger web.dom.clear /]
+[logic web.dom.clear]
+  > draw.clear:
+      id: ctx.id
+[/logic web.dom.clear]
+[/capsule web.dom.clear]
+
+[capsule web.route.url]
+[trigger web.route.url /]
+[logic web.route.url]
+  > memory.set web.url.path = ctx.path
+  > log: "[🔀] Symbolic route hit: {{ web.url.path }}"
+  > emit: run.{{ web.url.path }}
+[/logic web.route.url]
+[/capsule web.route.url]
+
+[capsule web.websocket.connect]
+[trigger web.websocket.connect /]
+[logic web.websocket.connect]
+  > websocket.connect:
+      url: ctx.url
+      id: ctx.id
+  > draw.label: "🔌 Connected to {{ ctx.url }}"
+[/logic web.websocket.connect]
+[/capsule web.websocket.connect]
+
+[capsule web.websocket.send]
+[trigger web.websocket.send /]
+[logic web.websocket.send]
+  > websocket.send:
+      id: ctx.id
+      data: ctx.data
+  > log: "[🔊] Sent WebSocket data"
+[/logic web.websocket.send]
+[/capsule web.websocket.send]
+
+[capsule web.websocket.receive]
+[trigger websocket.receive.* /]
+[logic web.websocket.receive]
+  > memory.set websocket.last = ctx.data
+  > draw.label: "📥 WS → {{ ctx.data }}"
+[/logic web.websocket.receive]
+[/capsule web.websocket.receive]
+
+[capsule web.websocket.autoReconnect]
+[trigger websocket.disconnect.* /]
+[logic web.websocket.autoReconnect]
+  > log.warn: "🔌 WebSocket {{ ctx.id }} disconnected – retrying in 5 s"
+  > wait: 5s
+  > websocket.connect:
+      url: ctx.url
+      id: ctx.id
+[/logic web.websocket.autoReconnect]
+[/capsule web.websocket.autoReconnect]
+
+[capsule web.bridge.init]
+[trigger boot.webBridge /]
+[logic web.bridge.init]
+  > emit: web.ready
+  > emit: websocket.listen
+  > emit: web.route.url
+  > log: "🌐 [bridge] Initializing symbolic web bridge..."
+  > emit.signal: bridge.open
+[/logic web.bridge.init]
+[/capsule web.bridge.init]
+
+[capsule device.camera.guard]
+[trigger device.camera.capture /]
+[logic device.camera.guard]
+  [condition noCam]
+    check: hardware.camera.exists != true
+    then:
+      > draw.label: "🚫 No camera detected"
+      > emit: device.capture.fail
+    else: > emit: device.camera.capture.exec
+  [/condition noCam]
+[/logic device.camera.guard]
+[/capsule device.camera.guard]
+
+[capsule device.camera.capture.exec]
+[trigger device.camera.capture.exec /]
+[logic device.camera.capture.exec]
+  > memory.set ctx.image = hardware.camera.snapshot()
+  > draw.label: "📷 Captured image"
+  > draw.show: ctx.image
+[/logic device.camera.capture.exec]
+[/capsule device.camera.capture.exec]
+
+[capsule device.capture.fail]
+[trigger device.capture.fail /]
+[logic device.capture.fail]
+  > log.error: "📸 Capture failed"
+[/logic device.capture.fail]
+[/capsule device.capture.fail]
+
+[capsule device.microphone.listen]
+[trigger device.microphone.listen /]
+[logic device.microphone.listen]
+  > memory.set ctx.audio = hardware.microphone.record(seconds=ctx.duration)
+  > draw.label: "🎙️ Audio captured"
+  > memory.set ctx.transcript = symbolic.speechToText(ctx.audio)
+  > draw.label: "📝 Transcript: {{ ctx.transcript }}"
+[/logic device.microphone.listen]
+[/capsule device.microphone.listen]
+
+[capsule device.gps.locate]
+[trigger device.gps.locate /]
+[logic device.gps.locate]
+  > memory.set ctx.location = hardware.gps.getLocation()
+  > draw.label: "📍 Current location: {{ ctx.location }}"
+[/logic device.gps.locate]
+[/capsule device.gps.locate]
+
+[capsule device.storage.write]
+[trigger device.storage.write /]
+[logic device.storage.write]
+  > hardware.disk.write(path=ctx.path, content=ctx.content)
+  > draw.label: "💾 Wrote to {{ ctx.path }}"
+[/logic device.storage.write]
+[/capsule device.storage.write]
+
+[capsule device.storage.read]
+[trigger device.storage.read /]
+[logic device.storage.read]
+  > memory.set ctx.fileContent = hardware.disk.read(ctx.path)
+  > draw.label: "📂 Read from {{ ctx.path }}"
+  > draw.append: ctx.fileContent
+[/logic device.storage.read]
+[/capsule device.storage.read]
+
+[capsule device.sensor.read]
+[trigger device.sensor.read /]
+[logic device.sensor.read]
+  > memory.set ctx.sensorValue = hardware.sensor.read(ctx.sensor)
+  > draw.label: "📡 Sensor {{ ctx.sensor }} = {{ ctx.sensorValue }}"
+[/logic device.sensor.read]
+[/capsule device.sensor.read]
+
+[capsule echo.bridge.sync]
+[trigger echo.sync /]
+[logic echo.bridge.sync]
+  > log: "[🔁] Syncing echo states across memory layers..."
+  > memory.sync.full
+  > emit: echo.resonate
+[/logic echo.bridge.sync]
+[/capsule echo.bridge.sync]
+
+[capsule echo.resonate]
+[trigger echo.resonate /]
+[logic echo.resonate]
+  > draw.label: "🌐 Echoes aligned."
+  > emit: echo.cascade
+[/logic echo.resonate]
+[/capsule echo.resonate]
+
+[capsule echo.cascade]
+[trigger echo.cascade /]
+[logic echo.cascade]
+  > memory.set: echo.trace += now()
+  > draw.append: echo.trace
+  > memory.set: echo.lastTime = now()
+  > draw.label: "⏱ Echo cascade @ {{ echo.lastTime }}"
+[/logic echo.cascade]
+[/capsule echo.cascade]
+
+[/capsule core23.bridgeLayer]
+[trigger websocket.listen /]
+
+[logic websocket.listen]
+  > log: "🚧 Trigger stub for websocket.listen"
+[/logic websocket.listen]
+
+[logic emit.web.fetch.get]
+  > emit: web.fetch.get
+  > log: "🚧 Emit stub for web.fetch.get"
+[/logic emit.web.fetch.get]
+
+[logic emit.web.websocket.connect]
+  > emit: web.websocket.connect
+  > log: "🚧 Emit stub for web.websocket.connect"
+[/logic emit.web.websocket.connect]
+
+[logic emit.device.sensor.read]
+  > emit: device.sensor.read
+  > log: "🚧 Emit stub for device.sensor.read"
+[/logic emit.device.sensor.read]
+
+[logic emit.web.dom.clear]
+  > emit: web.dom.clear
+  > log: "🚧 Emit stub for web.dom.clear"
+[/logic emit.web.dom.clear]
+
+[logic emit.every.30s.bridgePing]
+  > emit: every.30s.bridgePing
+  > log: "🚧 Emit stub for every.30s.bridgePing"
+[/logic emit.every.30s.bridgePing]
+
+[logic emit.device.storage.write]
+  > emit: device.storage.write
+  > log: "🚧 Emit stub for device.storage.write"
+[/logic emit.device.storage.write]
+
+[logic emit.web.dom.update]
+  > emit: web.dom.update
+  > log: "🚧 Emit stub for web.dom.update"
+[/logic emit.web.dom.update]
+
+[logic emit.web.fetch.post]
+  > emit: web.fetch.post
+  > log: "🚧 Emit stub for web.fetch.post"
+[/logic emit.web.fetch.post]
+
+[logic emit.net.receive]
+  > emit: net.receive
+  > log: "🚧 Emit stub for net.receive"
+[/logic emit.net.receive]
+
+[logic emit.network.broadcast]
+  > emit: network.broadcast
+  > log: "🚧 Emit stub for network.broadcast"
+[/logic emit.network.broadcast]
+
+[logic emit.network.syncCapsule]
+  > emit: network.syncCapsule
+  > log: "🚧 Emit stub for network.syncCapsule"
+[/logic emit.network.syncCapsule]
+
+[logic emit.device.storage.read]
+  > emit: device.storage.read
+  > log: "🚧 Emit stub for device.storage.read"
+[/logic emit.device.storage.read]
+
+[logic emit.web.form.submit]
+  > emit: web.form.submit
+  > log: "🚧 Emit stub for web.form.submit"
+[/logic emit.web.form.submit]
+
+[logic emit.network.receive]
+  > emit: network.receive
+  > log: "🚧 Emit stub for network.receive"
+[/logic emit.network.receive]
+
+[logic emit.device.gps.locate]
+  > emit: device.gps.locate
+  > log: "🚧 Emit stub for device.gps.locate"
+[/logic emit.device.gps.locate]
+
+[logic emit.device.microphone.listen]
+  > emit: device.microphone.listen
+  > log: "🚧 Emit stub for device.microphone.listen"
+[/logic emit.device.microphone.listen]
+
+[logic emit.web.websocket.send]
+  > emit: web.websocket.send
+  > log: "🚧 Emit stub for web.websocket.send"
+[/logic emit.web.websocket.send]
+
+[logic emit.every.2m.peerSweep]
+  > emit: every.2m.peerSweep
+  > log: "🚧 Emit stub for every.2m.peerSweep"
+[/logic emit.every.2m.peerSweep]

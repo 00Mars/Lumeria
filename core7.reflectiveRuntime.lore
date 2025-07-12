@@ -1,0 +1,173 @@
+[capsule reflectiveRuntime]
+
+[trigger boot.reflectiveRuntime /]
+
+[logic reflectiveRuntime.boot]
+  > log: "🔍 [core7] Booting reflective runtime..."
+  > emit: trace.init
+  > emit: trace.loop
+[/logic reflectiveRuntime.boot]
+
+[capsule trace.init]
+
+[trigger trace.init /]
+
+[memory trace.enabled /]
+[memory trace.stack /]
+[memory trace.capsules /]
+[memory trace.tick /]
+[memory trace.snapshot.last /]
+
+[logic trace.init]
+  > memory.scope: trace
+  > memory.set: trace.enabled = true
+  > memory.set: trace.stack = []
+  > memory.set: trace.capsules = {}
+  > memory.set: trace.tick = 0
+  > emit: trace.ready
+[/logic trace.init]
+
+[/capsule trace.init]
+
+[capsule trace.loop]
+
+[trigger trace.ready /]
+[trigger trace.loop /]
+
+[logic trace.loop]
+  > memory.set: trace.tick += 1
+  > emit: trace.snapshot
+  > delay: 500ms
+  > emit: trace.loop
+[/logic trace.loop]
+
+[/capsule trace.loop]
+
+[capsule trace.signal]
+
+[trigger trace.signal /]
+
+[logic trace.signal]
+  [condition trace.enabled]
+    check: trace.enabled == true
+    then:
+      > memory.list.add: trace.stack = {
+          tick: {{ trace.tick }},
+          signal: {{ signal.payload }},
+          capsule: {{ signal.source }},
+          time: now()
+        }
+
+      # Optional cap on trace history (500 entries)
+      > condition: len(trace.stack) > 500
+        do: > memory.set: trace.stack = trace.stack[-500:]
+
+      > log: "🧭 [trace] Signal trace: {{ signal.payload }} from {{ signal.source }}"
+  [/condition trace.enabled]
+[/logic trace.signal]
+
+[/capsule trace.signal]
+
+[capsule trace.snapshot]
+
+[trigger trace.snapshot /]
+
+[logic trace.snapshot]
+  > memory.set: trace.snapshot.last = trace.stack
+  > emit: capsule.snapshot
+[/logic trace.snapshot]
+
+[/capsule trace.snapshot]
+
+[capsule capsule.snapshot]
+
+[trigger capsule.snapshot /]
+
+[logic capsule.snapshot]
+  > log: "📸 [snapshot] Capturing capsule execution state..."
+  > condition: snapshot.capsules exists
+    do: > memory.set: trace.capsules = snapshot.capsules()
+  > condition: not snapshot.capsules exists
+    do: > log: "⚠️ Snapshot failed — no capsule data returned"
+[/logic capsule.snapshot]
+
+[/capsule capsule.snapshot]
+
+[capsule capsule.introspect]
+
+[trigger capsule.introspect /]
+
+[logic capsule.introspect]
+  > log: "🔍 [introspect] Scanning current capsule..."
+  > draw.json: source = trace.capsules
+[/logic capsule.introspect]
+
+[/capsule capsule.introspect]
+
+[capsule capsule.rewrite]
+
+[trigger capsule.rewrite /]
+
+[logic capsule.rewrite]
+  > log: "✍️ [rewrite] Injecting new capsule definition..."
+
+  [condition fs.enabled]
+    check: fs.enabled == true
+    then:
+      > fs.write: path = ctx.path data = ctx.contents
+      > emit: reload.capsule
+
+  [condition fs.disabled]
+    check: fs.enabled != true
+    then:
+      > memory.set: capsule.inject.manual = ctx.contents
+      > log: "⚠️ Filesystem write disabled. Capsule stored in memory for manual reload."
+[/logic capsule.rewrite]
+
+[/capsule capsule.rewrite]
+
+[capsule reload.capsule]
+
+[trigger reload.capsule /]
+
+[logic reload.capsule]
+  > log: "🔁 [reload] Reloading updated capsule definition..."
+  > emit: capsule.reload
+[/logic reload.capsule]
+
+[/capsule reload.capsule]
+
+[ui reflectiveRuntime.panel]
+  > draw.label: "🔍 Reflective Runtime Panel"
+  > draw.field: label = "Trace Tick" value = trace.tick
+  > draw.field: label = "Last Capsule Count" value = len(trace.capsules)
+  > draw.field: label = "Signal Log Size" value = len(trace.stack)
+  > draw.memory: source = trace.snapshot.last
+[/ui reflectiveRuntime.panel]
+
+[/capsule reflectiveRuntime]
+[trigger capsule.reload /]
+
+[logic capsule.reload]
+  > log: "🚧 Trigger stub for capsule.reload"
+[/logic capsule.reload]
+
+[logic emit.capsule.introspect]
+  > emit: capsule.introspect
+  > log: "🚧 Emit stub for capsule.introspect"
+[/logic emit.capsule.introspect]
+
+[logic emit.capsule.rewrite]
+  > emit: capsule.rewrite
+  > log: "🚧 Emit stub for capsule.rewrite"
+[/logic emit.capsule.rewrite]
+
+[logic emit.trace.signal]
+  > emit: trace.signal
+  > log: "🚧 Emit stub for trace.signal"
+[/logic emit.trace.signal]
+
+[logic emit.boot.reflectiveRuntime]
+  > emit: boot.reflectiveRuntime
+  > log: "🚧 Emit stub for boot.reflectiveRuntime"
+[/logic emit.boot.reflectiveRuntime]

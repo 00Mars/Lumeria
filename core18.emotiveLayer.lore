@@ -1,0 +1,382 @@
+[capsule core18.emotiveLayer]
+
+[capsule audio.play]
+
+[trigger audio.play /]
+
+[logic audio.play]
+  > log: "🔊 Playing audio: {{ ctx.file }}"
+  > sound.play: file = ctx.file
+[/logic audio.play]
+
+[/capsule audio.play]
+
+[capsule audio.speak]
+
+[trigger audio.speak /]
+
+[logic audio.speak]
+  > log: "🗣️ Speaking phrase: '{{ ctx.phrase }}'"
+  > sound.speak: phrase = ctx.phrase mood = memory.mood
+[/logic audio.speak]
+
+[/capsule audio.speak]
+
+[capsule audio.react]
+
+[trigger audio.react /]
+
+[logic audio.react]
+  > log: "🎧 Reacting to mood change: {{ ctx.previousMood }} → {{ memory.mood }}"
+
+  [condition mood.serene]
+    check: memory.mood == "serene" and ctx.previousMood in ["tense", "dark"]
+    then:
+      > emit: audio.volumeFade
+      > sound.play: file = "tones/serene.ogg"
+      > emit: mood.cascade  # Patch to resolve orphan trigger
+      > emit: reflex.trigger
+
+  [/condition mood.serene]
+
+  [condition mood.joyful]
+    check: memory.mood == "joyful" and ctx.previousMood in ["dark", "tense"]
+    then:
+      > emit: audio.volumeFade
+      > sound.play: file = "tones/joyful.ogg"
+      > emit: mood.cascade  # Patch to resolve orphan trigger
+      > emit: reflex.trigger
+
+  [/condition mood.joyful]
+
+  [condition mood.tense]
+    check: memory.mood == "tense"
+    then: 
+      > sound.play: file = "tones/tense.ogg"
+      > emit: mood.cascade  # Patch to resolve orphan trigger
+      > emit: reflex.trigger
+
+  [/condition mood.tense]
+
+  [condition mood.dark]
+    check: memory.mood == "dark"
+    then: 
+      > sound.play: file = "tones/dark.ogg"
+      > emit: mood.cascade  # Patch to resolve orphan trigger
+      > emit: reflex.trigger
+
+  [/condition mood.dark]
+[/logic audio.react]
+
+[/capsule audio.react]
+
+[capsule audio.stop]
+
+[trigger audio.stop /]
+
+[logic audio.stop]
+  > log: "⏹️ Stopping all audio"
+  > sound.stop
+[/logic audio.stop]
+
+[/capsule audio.stop]
+
+[capsule audio.volumeFade]
+
+[trigger audio.volumeFade /]
+
+[logic audio.volumeFade]
+  > log: "🔉 Gradually fading audio volume"
+  > sound.fade: target = 0.0 duration = 2s
+[/logic audio.volumeFade]
+
+[/capsule audio.volumeFade]
+
+[capsule audio.loop]
+
+[trigger audio.loop /]
+
+[logic audio.loop]
+  > sound.loop file = ctx.file
+[/logic audio.loop]
+
+[/capsule audio.loop]
+
+[capsule audio.setVolume]
+
+[trigger audio.setVolume /]
+
+[logic audio.setVolume]
+  > sound.volume level = ctx.level
+[/logic audio.setVolume]
+
+[/capsule audio.setVolume]
+
+[capsule audio.moodReactive]
+
+[trigger mood.changed /]
+
+[logic audio.moodReactive]
+  > emit: audio.react
+[/logic audio.moodReactive]
+
+[/capsule audio.moodReactive]
+
+[capsule emotion.set]
+
+[trigger emotion.set /]
+
+[logic emotion.set]
+  > memory.set: mood.current = ctx.value
+  > emit: mood.reflect
+[/logic emotion.set]
+
+[/capsule emotion.set]
+
+[capsule emotion.shift]
+
+[trigger emotion.shift /]
+
+[logic emotion.shift]
+  > draw.label: "🫧 Mood shifting to {{ ctx.value }}"
+  > memory.set: mood.previous = mood.current
+  > memory.set: mood.current = ctx.value
+  > emit: mood.reflect
+[/logic emotion.shift]
+
+[/capsule emotion.shift]
+
+[capsule emotion.reflect]
+
+[trigger mood.reflect /]
+
+[logic emotion.reflect]
+  > draw.overlay: "🌈 Current Mood: {{ mood.current }}"
+  > draw.label: "🎭 Reflecting mood: {{ memory.mood.current }}"
+  > draw.label: "→ Intensity: {{ memory.mood.intensity }}"
+[/logic emotion.reflect]
+
+[/capsule emotion.reflect]
+
+[capsule emotion.resonate]
+
+[trigger emotion.resonate /]
+
+[logic emotion.resonate]
+  [condition match]
+    check: ctx.value == mood.current
+    then: > emit: ctx.match
+  [/condition match]
+
+  [condition mismatch]
+    check: ctx.value != mood.current
+    then: > emit: ctx.mismatch
+  [/condition mismatch]
+[/logic emotion.resonate]
+
+[/capsule emotion.resonate]
+
+[capsule emotion.cycle]
+
+[trigger emotion.cycle /]
+
+[logic emotion.cycle]
+  > memory.set: mood.current = cycle.next(mood.available, mood.current)
+  > emit: mood.reflect
+[/logic emotion.cycle]
+
+[/capsule emotion.cycle]
+
+[capsule reflex.response.bind]
+
+[trigger reflex.bind /]
+
+[logic reflex.response.bind]
+  > memory.set: reflex.{{ ctx.id }}.trigger = ctx.trigger
+  > memory.set: reflex.{{ ctx.id }}.response = ctx.response
+  > log: "[⚡] Bound reflex '{{ ctx.id }}' to trigger '{{ ctx.trigger }}'"
+[/logic reflex.response.bind]
+
+[/capsule reflex.response.bind]
+
+[capsule reflex.response.fire]
+
+[trigger reflex.trigger /]
+
+[logic reflex.response.fire]
+  [condition has.response]
+    check: memory.exists("reflex.{{ ctx.id }}.response")
+    then: > emit: {{ memory["reflex.{{ ctx.id }}.response"] }}
+  [/condition has.response]
+
+  [condition missing.response]
+    check: memory.not.exists("reflex.{{ ctx.id }}.response")
+    then: > log: "[⚠️] No response found for reflex '{{ ctx.id }}'"
+  [/condition missing.response]
+[/logic reflex.response.fire]
+
+[/capsule reflex.response.fire]
+
+[capsule reflex.condition.evaluate]
+
+[trigger reflex.check /]
+
+[logic reflex.condition.evaluate]
+  [condition exists]
+    check: ctx.condition exists
+    then:
+      > log: "[⚡] Evaluating reflex condition: {{ ctx.condition }}"
+      > emit: reflex.triggered
+  [/condition exists]
+
+  [condition missing]
+    check: ctx.condition not exists
+    then: > emit: reflex.missing
+  [/condition missing]
+[/logic reflex.condition.evaluate]
+
+[/capsule reflex.condition.evaluate]
+
+[capsule reflex.triggered]
+
+[trigger reflex.triggered /]
+
+[logic reflex.triggered]
+  > log: "[⚡] Reflex triggered!"
+  > emit: ctx.onTrigger
+[/logic reflex.triggered]
+
+[/capsule reflex.triggered]
+
+[capsule reflex.missing]
+
+[trigger reflex.missing /]
+
+[logic reflex.missing]
+  > draw.label: "⚠️ Reflex condition not found for: {{ ctx.id }}"
+[/logic reflex.missing]
+
+[/capsule reflex.missing]
+
+[capsule reflex.define]
+
+[trigger reflex.define /]
+
+[logic reflex.define]
+  > memory.set: reflex.{{ ctx.id }}.condition = ctx.condition
+  > memory.set: reflex.{{ ctx.id }}.action = ctx.onTrigger
+  > log: "[🧠] Reflex '{{ ctx.id }}' registered."
+[/logic reflex.define]
+
+[/capsule reflex.define]
+
+[capsule mood.cascade.start]
+
+[trigger mood.cascade /]
+
+[logic mood.cascade.start]
+  > memory.set: mood.state = ctx.state
+  > emit: mood.cascade.flow
+[/logic mood.cascade.start]
+
+[/capsule mood.cascade.start]
+
+[capsule mood.cascade.flow]
+
+[trigger mood.cascade.flow /]
+
+[logic mood.cascade.flow]
+  > draw.label: "🌀 Mood shifted to '{{ mood.state }}'"
+  > memory.set: cascade.level += 1
+
+  [condition continue]
+    check: cascade.level < 5
+    then: > emit: mood.cascade.flow
+  [/condition continue]
+[/logic mood.cascade.flow]
+
+[/capsule mood.cascade.flow]
+
+[/capsule core18.emotiveLayer]
+[trigger ctx.onTrigger /]
+
+[logic ctx.onTrigger]
+  > log: "🚧 Trigger stub for ctx.onTrigger"
+[/logic ctx.onTrigger]
+
+[trigger ctx.mismatch /]
+
+[logic ctx.mismatch]
+  > log: "🚧 Trigger stub for ctx.mismatch"
+[/logic ctx.mismatch]
+
+[trigger ctx.match /]
+
+[logic ctx.match]
+  > log: "🚧 Trigger stub for ctx.match"
+[/logic ctx.match]
+
+[logic emit.emotion.resonate]
+  > emit: emotion.resonate
+  > log: "🚧 Emit stub for emotion.resonate"
+[/logic emit.emotion.resonate]
+
+[logic emit.audio.play]
+  > emit: audio.play
+  > log: "🚧 Emit stub for audio.play"
+[/logic emit.audio.play]
+
+[logic emit.reflex.check]
+  > emit: reflex.check
+  > log: "🚧 Emit stub for reflex.check"
+[/logic emit.reflex.check]
+
+[logic emit.audio.speak]
+  > emit: audio.speak
+  > log: "🚧 Emit stub for audio.speak"
+[/logic emit.audio.speak]
+
+[logic emit.reflex.bind]
+  > emit: reflex.bind
+  > log: "🚧 Emit stub for reflex.bind"
+[/logic emit.reflex.bind]
+
+[logic emit.emotion.cycle]
+  > emit: emotion.cycle
+  > log: "🚧 Emit stub for emotion.cycle"
+[/logic emit.emotion.cycle]
+
+[logic emit.mood.changed]
+  > emit: mood.changed
+  > log: "🚧 Emit stub for mood.changed"
+[/logic emit.mood.changed]
+
+[logic emit.emotion.shift]
+  > emit: emotion.shift
+  > log: "🚧 Emit stub for emotion.shift"
+[/logic emit.emotion.shift]
+
+[logic emit.audio.stop]
+  > emit: audio.stop
+  > log: "🚧 Emit stub for audio.stop"
+[/logic emit.audio.stop]
+
+[logic emit.reflex.define]
+  > emit: reflex.define
+  > log: "🚧 Emit stub for reflex.define"
+[/logic emit.reflex.define]
+
+[logic emit.audio.loop]
+  > emit: audio.loop
+  > log: "🚧 Emit stub for audio.loop"
+[/logic emit.audio.loop]
+
+[logic emit.emotion.set]
+  > emit: emotion.set
+  > log: "🚧 Emit stub for emotion.set"
+[/logic emit.emotion.set]
+
+[logic emit.audio.setVolume]
+  > emit: audio.setVolume
+  > log: "🚧 Emit stub for audio.setVolume"
+[/logic emit.audio.setVolume]

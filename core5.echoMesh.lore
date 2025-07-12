@@ -1,0 +1,373 @@
+[capsule core5.echoMesh]
+
+[capsule echoMesh.boot]
+[trigger boot.echoMesh /]
+[logic echoMesh.boot]
+  > log: "🌐 [core5] Booting EchoMesh distributed substrate..."
+  > emit: mesh.init
+  > emit: mesh.loop
+[/logic echoMesh.boot]
+[/capsule echoMesh.boot]
+
+[capsule echoMesh.init]
+[trigger mesh.init /]
+[logic echoMesh.init]
+  > log: "🌐 [mesh] Initializing EchoMesh..."
+  > memory.scope: mesh
+  > memory.set mesh.id = generate.uuid()
+  > memory.set mesh.nodes = {}
+  > memory.set mesh.trustMap = {}
+  > memory.set mesh.synced = true
+  > emit: mesh.ready
+[/logic echoMesh.init]
+[/capsule echoMesh.init]
+
+[capsule echoMesh.route]
+[trigger mesh.ready /]
+[trigger mesh.loop /]
+[logic echoMesh.route]
+  [condition ctx.signal == "mesh.ready"]
+    then:
+      > log: "✅ [mesh] Ready for distributed resonance"
+      > emit: mesh.loop
+  [condition ctx.signal == "mesh.loop"]
+    then:
+      > emit: mesh.tick
+[/logic echoMesh.route]
+[/capsule echoMesh.route]
+
+[capsule echoMesh.tick]
+[trigger mesh.tick /]
+[logic echoMesh.tick]
+  > emit: mesh.ping
+  > emit: mesh.observe
+  > wait: 250ms
+  > emit: mesh.loop
+  > emit: quantum.observe
+  > emit: quantum.observe
+[/logic echoMesh.tick]
+[/capsule echoMesh.tick]
+
+[capsule echoMesh.ping]
+[trigger mesh.ping /]
+[logic echoMesh.ping]
+  > log: "📱 [mesh] Broadcasting echo.ping to neighbors..."
+  > foreach: node in mesh.nodes
+    do:
+      > emit: echo.transmit target = node.id payload = { signal: "echo.ping", from: mesh.id }
+[/logic echoMesh.ping]
+[/capsule echoMesh.ping]
+
+[capsule echoMesh.transduce]
+[trigger echo.transmit /]
+[logic echoMesh.transduce]
+  [condition memory.nodes[ctx.target].modulate == true]
+    then:
+      > ctx.payload.signal = "echo.sync.mood"
+      > ctx.payload.memory.overlay = memory.export(keys = ["mood.*"])
+      > log: "🔄 Transducing signal into mood overlay"
+  > emit: echo.transmit.raw target = ctx.target payload = ctx.payload
+[/logic echoMesh.transduce]
+[/capsule echoMesh.transduce]
+
+[capsule echoMesh.transmit.raw]
+[trigger echo.transmit.raw /]
+[logic echoMesh.transmit.raw]
+  > log: "🚀 [raw] Transmitting to {{ctx.target}} with payload: {{ctx.payload.signal}}"
+  - return
+[/logic echoMesh.transmit.raw]
+[/capsule echoMesh.transmit.raw]
+
+[capsule echoMesh.receive.react]
+[trigger echo.signal /]
+[logic echoMesh.receive.react]
+  [condition ctx.signal.signal == "echo.sync"]
+    then:
+      > memory.overlay: ctx.signal.memory.overlay
+      > log: "🧐 [echo] Merged remote symbolic overlay"
+  [condition ctx.signal.signal == "echo.sync.quantum"]
+    then:
+      > memory.overlay: ctx.signal.memory.overlay
+      > emit: quantum.observe.memory
+  [condition ctx.signal.signal == "echo.sync.mood"]
+    then:
+      > memory.overlay: ctx.signal.memory.overlay
+      > emit: mood.reflect
+[/logic echoMesh.receive.react]
+[/capsule echoMesh.receive.react]
+
+[capsule echoMesh.observe]
+[trigger mesh.observe /]
+[logic echoMesh.observe]
+  > log: "👁️ [mesh] Observing symbolic flows for resonance..."
+  [condition memory.mood.state == "resonant"]
+    then:
+      > emit: mesh.sync
+      > emit: mind.resonate
+  [condition memory.signal.flow matches "echo.*"]
+    then:
+      > log: "🔊 Echo signal resonance detected: {{memory.signal.flow}}"
+  [condition mind.intent exists]
+    then:
+      > emit: agent.loop
+  [condition memory.agent.queue not empty]
+    then:
+      > emit: agent.loop
+  > emit: story.flow.detect
+[/logic echoMesh.observe]
+[/capsule echoMesh.observe]
+
+[capsule echoMesh.sync.full]
+[trigger echo.sync.full /]
+[logic echoMesh.sync.full]
+  > log: "🧠 [echo] Performing deep symbolic sync with optional self-mirror overlay..."
+  [condition ctx.signal.memory.overlay exists]
+    then:
+      > log: "🧬 [echo] Merging received memory overlay..."
+      > memory.overlay: ctx.signal.memory.overlay
+  [condition ctx.signal.memory.overlay not exists]
+    then:
+      > log: "⚠️ [echo] No overlay received with sync.full"
+  > emit: mind.reflect
+  > emit: mood.reflect
+  > emit: mirror.reflect
+[/logic echoMesh.sync.full]
+[/capsule echoMesh.sync.full]
+
+[capsule echoMesh.sync.mind]
+[trigger echo.sync.mind /]
+[logic echoMesh.sync.mind]
+  > log: "🧠 Syncing mind state..."
+  > emit: echo.transmit target = ctx.target payload = { signal: "echo.sync.mind", memory.overlay: memory.export(keys = ["mind.*"]) }
+[/logic echoMesh.sync.mind]
+[/capsule echoMesh.sync.mind]
+
+[capsule echoMesh.sync.mood]
+[trigger echo.sync.mood /]
+[logic echoMesh.sync.mood]
+  > log: "💫 Syncing mood field..."
+  > emit: echo.transmit target = ctx.target payload = { signal: "echo.sync.mood", memory.overlay: memory.export(keys = ["mood.*"]) }
+[/logic echoMesh.sync.mood]
+[/capsule echoMesh.sync.mood]
+
+[capsule memory.sync.dispatch]
+[trigger memory.sync.full /]
+[trigger memory.sync.quantum /]
+[logic memory.sync.dispatch]
+  [condition ctx.signal == "memory.sync.full"]
+    then:
+      > memory.set sync.mode = "full"
+      > emit: mesh.sync
+  [condition ctx.signal == "memory.sync.quantum"]
+    then:
+      > memory.set sync.mode = "quantum"
+      > emit: mesh.sync
+[/logic memory.sync.dispatch]
+[/capsule memory.sync.dispatch]
+
+[capsule echoMesh.sync.dispatch]
+[trigger mesh.sync /]
+[logic echoMesh.sync.dispatch]
+  > log: "🦼 [mesh] Dispatching memory sync based on mode..."
+  [condition sync.mode == "full"]
+    then: > emit: mesh.sync.full
+  [condition sync.mode == "quantum"]
+    then: > emit: mesh.sync.quantum
+  [condition sync.mode is undefined]
+    then:
+      [condition mood.state == "dreamlike" or mind.intent matches "entangle"]
+        then:
+          > log: "🤖 [auto] Defaulting to quantum sync"
+          > memory.set sync.mode = "quantum"
+          > emit: mesh.sync.quantum
+      [condition mind.intent matches "align.deep" or memory.identity.snapshot exists]
+        then:
+          > log: "🤖 [auto] Defaulting to full sync"
+          > memory.set sync.mode = "full"
+          > emit: mesh.sync.full
+      > log: "⚠️ [auto] No sync performed – unknown intent or state"
+[/logic echoMesh.sync.dispatch]
+[/capsule echoMesh.sync.dispatch]
+
+[capsule mesh.sync.full]
+[trigger mesh.sync.full /]
+[logic mesh.sync.full]
+  > log: "📡 [mesh] Performing full memory sync"
+  > foreach: entry in mesh.trustMap
+    do:
+      [condition entry.trusted == true]
+        then:
+          [condition memory.has_keys(prefix = "self.mirror.")]
+            then:
+              > emit: echo.transmit target = entry.id payload = {
+                  signal: "echo.sync.full",
+                  from: mesh.id,
+                  memory.overlay: memory.export(keys = ["mind.*", "mood.*", "quantum.*", "self.mirror.*"])
+                }
+          [condition not memory.has_keys(prefix = "self.mirror.")]
+            then:
+              > emit: echo.transmit target = entry.id payload = {
+                  signal: "echo.sync.full",
+                  from: mesh.id,
+                  memory.overlay: memory.export(keys = ["mind.*", "mood.*", "quantum.*"])
+                }
+[/logic mesh.sync.full]
+[/capsule mesh.sync.full]
+
+[capsule mesh.sync.quantum]
+[trigger mesh.sync.quantum /]
+[logic mesh.sync.quantum]
+  > log: "🔪 [mesh] Performing quantum-state sync"
+  > foreach: entry in mesh.trustMap
+    do:
+      [condition entry.trusted == true]
+        then:
+          > emit: echo.transmit target = entry.id payload = {
+              signal: "echo.sync",
+              from: mesh.id,
+              memory.overlay: memory.export(keys = ["quantum.*"])
+            }
+[/logic mesh.sync.quantum]
+[/capsule mesh.sync.quantum]
+
+[capsule mesh.sync.test]
+[trigger mesh.sync.test /]
+[logic mesh.sync.test]
+  > emit: mesh.sync.quantum
+  > wait: 500ms
+  > emit: mesh.sync.full
+[/logic mesh.sync.test]
+[/capsule mesh.sync.test]
+
+[capsule echoMesh.resonance.check]
+[trigger mesh.resonance.check /]
+[logic echoMesh.resonance.check]
+  > foreach: node in mesh.nodes
+    do:
+      [condition node.lastSync.mood.state == "resonant"]
+        then:
+          > memory.list.add: mesh.resonant.nodes = node.id
+  [condition len(mesh.resonant.nodes) >= 3]
+    then:
+      > emit: mesh.resonance.wave
+[/logic echoMesh.resonance.check]
+[/capsule echoMesh.resonance.check]
+
+[capsule echoMesh.bufferLayer]
+[trigger memory.reflect.request /]
+[trigger echo.route /]
+[trigger echo.response /]
+[memory echo.grid /]
+[memory echo.buffer /]
+[memory echo.trace /]
+[logic echo.init]
+  > log: "🌐 [echoMesh] Initializing mesh memory layer..."
+  > memory.set: echo.grid = {}
+  > memory.set: echo.buffer = []
+  > memory.set: echo.trace = []
+[/logic echo.init]
+[when memory.reflect.request]
+  > emit: echo.route signal = ctx.signal
+[/when memory.reflect.request]
+[when echo.route]
+  > memory.append: echo.trace = ctx.signal
+  > memory.append: echo.buffer = ctx.signal
+  > emit: echo.response signal = ctx.signal
+[/when echo.route]
+[when echo.response]
+  > log: "🔁 [echoMesh] Echoed signal: {{ ctx.signal }}"
+[/when echo.response]
+[/capsule echoMesh.bufferLayer]
+
+[capsule echoMesh.injector]
+[trigger pulse.inject.echo /]
+[logic pulseInjector]
+  > log: "📡 [echoMesh] Injecting pulse into echo buffer"
+  > memory.append: echo.buffer = ctx.pulse
+  > emit: echo.route signal = ctx.pulse
+[/logic pulseInjector]
+[/capsule echoMesh.injector]
+
+[capsule echoMesh.bufferTools]
+[trigger buffer.clear.echo /]
+[logic bufferClear]
+  > log: "🧹 [echoMesh] Clearing echo buffer"
+  > memory.set: echo.buffer = []
+[/logic bufferClear]
+[/capsule echoMesh.bufferTools]
+
+[/capsule core5.echoMesh]
+
+[trigger mirror.reflect /]
+
+[logic mirror.reflect]
+  > log: "🚧 Trigger stub for mirror.reflect"
+[/logic mirror.reflect]
+
+[trigger story.flow.detect /]
+
+[logic story.flow.detect]
+  > log: "🚧 Trigger stub for story.flow.detect"
+[/logic story.flow.detect]
+
+[trigger mind.resonate /]
+
+[logic mind.resonate]
+  > log: "🚧 Trigger stub for mind.resonate"
+[/logic mind.resonate]
+
+[trigger mesh.resonance.wave /]
+
+[logic mesh.resonance.wave]
+  > log: "🚧 Trigger stub for mesh.resonance.wave"
+[/logic mesh.resonance.wave]
+
+[logic emit.pulse.inject.echo]
+  > emit: pulse.inject.echo
+  > log: "🚧 Emit stub for pulse.inject.echo"
+[/logic emit.pulse.inject.echo]
+
+[logic emit.echo.signal]
+  > emit: echo.signal
+  > log: "🚧 Emit stub for echo.signal"
+[/logic emit.echo.signal]
+
+[logic emit.memory.sync.quantum]
+  > emit: memory.sync.quantum
+  > log: "🚧 Emit stub for memory.sync.quantum"
+[/logic emit.memory.sync.quantum]
+
+[logic emit.mesh.resonance.check]
+  > emit: mesh.resonance.check
+  > log: "🚧 Emit stub for mesh.resonance.check"
+[/logic emit.mesh.resonance.check]
+
+[logic emit.echo.sync.mood]
+  > emit: echo.sync.mood
+  > log: "🚧 Emit stub for echo.sync.mood"
+[/logic emit.echo.sync.mood]
+
+[logic emit.mesh.sync.test]
+  > emit: mesh.sync.test
+  > log: "🚧 Emit stub for mesh.sync.test"
+[/logic emit.mesh.sync.test]
+
+[logic emit.boot.echoMesh]
+  > emit: boot.echoMesh
+  > log: "🚧 Emit stub for boot.echoMesh"
+[/logic emit.boot.echoMesh]
+
+[logic emit.memory.reflect.request]
+  > emit: memory.reflect.request
+  > log: "🚧 Emit stub for memory.reflect.request"
+[/logic emit.memory.reflect.request]
+
+[logic emit.buffer.clear.echo]
+  > emit: buffer.clear.echo
+  > log: "🚧 Emit stub for buffer.clear.echo"
+[/logic emit.buffer.clear.echo]
+
+[logic emit.echo.sync.mind]
+  > emit: echo.sync.mind
+  > log: "🚧 Emit stub for echo.sync.mind"
+[/logic emit.echo.sync.mind]

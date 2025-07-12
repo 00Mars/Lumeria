@@ -1,0 +1,192 @@
+[capsule core10.reflectiveSelf]
+
+[meta reflective.self]
+  set: type = module
+  set: version = 0.5
+  set: author = system.lumeria
+  set: purpose = "Reflective runtime for symbolic self-monitoring, identity capture, memory mirroring, and timeline visualization"
+[/meta reflective.self]
+
+[trigger boot.reflectiveSelf /]
+[trigger self.init /]
+[trigger self.loop /]
+[trigger self.reflect /]
+[trigger self.reflect.identity /]
+[trigger self.reflect.memory /]
+[trigger self.reflect.timeline /]
+[trigger self.observe.structure /]
+[trigger self.observe.memory /]
+[trigger self.observe.identity /]
+[trigger self.observe.context /]
+[trigger self.snapshot /]
+[trigger self.mirror.sync /]
+[trigger self.reflect.merge /]
+[trigger echo.sync.full /]
+[trigger self.debug /]
+[trigger story.debug /]
+
+[memory self.id /]
+[memory self.identity /]
+[memory self.trace.history /]
+[memory self.reflect.rate /]
+[memory self.symbols /]
+[memory self.capsules /]
+[memory self.mirror /]
+[memory self.snapshot /]
+
+[when boot.reflectiveSelf]
+  > log: "🦮 [core10] Booting Reflective Self..."
+  > emit: self.init
+  > emit: self.loop
+[/when boot.reflectiveSelf]
+
+[when self.init]
+  > log: "🦮 [self] Initializing symbolic self-structure..."
+  > memory.scope: self
+  > memory.set self.id = generate.uuid()
+  > memory.set self.identity = generate.identity()
+  > memory.set self.capsules = runtime.listCapsules()
+  > memory.set self.symbols = grammar.introspect()
+  > memory.set self.reflect.rate = 20s
+  > memory.set self.mirror = {}
+  > emit: self.ready
+  > emit: self.tick
+[/when self.init]
+
+[when self.loop]
+  > emit: self.reflect
+  > delay: self.reflect.rate
+  > emit: self.loop
+[/when self.loop]
+
+[when self.reflect]
+  > log: "🔁 [self] Reflecting current symbolic state"
+  > emit: self.observe.structure
+  > emit: self.observe.memory
+  > emit: self.observe.identity
+  > emit: self.observe.context
+  > emit: self.reflect.identity
+  > emit: self.reflect.memory
+  > emit: self.reflect.timeline
+[/when self.reflect]
+
+[when self.reflect.identity]
+  > log: "🪞 [self] Identity: {{ self.identity }}"
+  > memory.set self.mirror.identity = {{ self.identity }}
+[/when self.reflect.identity]
+
+[when self.reflect.memory]
+  > log: "🧬 [self] Capturing echo memory snapshot..."
+  > memory.append: self.trace.history = echo.memory("*")
+  > memory.set self.mirror.trace = {{ memory.trace.log }}
+[/when self.reflect.memory]
+
+[when self.reflect.timeline]
+  > draw.timeline: source = self.trace.history
+  > log: "📈 [self] Timeline visualized"
+[/when self.reflect.timeline]
+
+[when self.observe.structure]
+  > log: "📘 [self] Reflecting on capsule structure..."
+  > memory.set self.mirror.capsules = runtime.listCapsules()
+  > memory.set self.mirror.verbs = grammar.introspect()
+[/when self.observe.structure]
+
+[when self.observe.memory]
+  > log: "🧠 [self] Extracting current mind + mood state"
+  > memory.set self.mirror.mood = memory.export(keys = ["mood.*"])
+  > memory.set self.mirror.mind = memory.export(keys = ["mind.*"])
+[/when self.observe.memory]
+
+[when self.observe.identity]
+  > log: "👁️ [self] Capturing symbolic self-image..."
+  > memory.set self.mirror.identity = memory.export(keys = ["self.*", "user.*", "agent.*"])
+[/when self.observe.identity]
+
+[when self.observe.context]
+  > log: "♻️ [self] Recording active signal + execution context"
+  > memory.set self.mirror.context.signal = memory.current_signal
+  > memory.set self.mirror.context.scene = memory.visual.scene
+[/when self.observe.context]
+
+[when self.snapshot]
+  > log: "📸 [self] Snapshotting full reflective mirror..."
+  > memory.set self.snapshot = memory.export(keys = ["self.mirror.*"])
+  > memory.set self.snapshot.story = memory.export(keys = ["story.*"])
+[/when self.snapshot]
+
+[when self.mirror.sync]
+  > log: "🔁 [self] Syncing self.mirror overlay to mesh..."
+  > memory.set sync.mode = "full"
+  > emit: mesh.sync
+[/when self.mirror.sync]
+
+[when echo.sync.full]
+  [condition mirror.overlay.exists]
+    check: signal.memory.overlay contains "self.mirror"
+    then:
+      > log: "🪞 [self] Received mirror overlay from {{signal.from}}"
+      > memory.overlay: {{ signal.memory.overlay }}
+      > emit: self.reflect.merge
+  [/condition mirror.overlay.exists]
+[/when echo.sync.full]
+
+[when self.reflect.merge]
+  > log: "🔍 [self] Merging and analyzing mirrored self-state..."
+  > memory.set self.mirror.lastMerge = now()
+[/when self.reflect.merge]
+
+[when self.debug]
+  > log: "🦮 Debug Mirror:"
+  > for.each: self.mirror as key, value
+    do: > log: "{{key}} → {{value}}"
+[/when self.debug]
+
+[when story.debug]
+  > log: "📜 Story Memory Debug:"
+  > for.each: story.trace as entry
+    do: > log: "{{entry.timestamp}} — {{entry.signal}} | mood: {{entry.mood}}"
+[/when story.debug]
+
+[/capsule core10.reflectiveSelf]
+[trigger self.ready /]
+
+[logic self.ready]
+  > log: "🚧 Trigger stub for self.ready"
+[/logic self.ready]
+
+[trigger self.tick /]
+
+[logic self.tick]
+  > log: "🚧 Trigger stub for self.tick"
+[/logic self.tick]
+
+[logic emit.echo.sync.full]
+  > emit: echo.sync.full
+  > log: "🚧 Emit stub for echo.sync.full"
+[/logic emit.echo.sync.full]
+
+[logic emit.self.debug]
+  > emit: self.debug
+  > log: "🚧 Emit stub for self.debug"
+[/logic emit.self.debug]
+
+[logic emit.story.debug]
+  > emit: story.debug
+  > log: "🚧 Emit stub for story.debug"
+[/logic emit.story.debug]
+
+[logic emit.boot.reflectiveSelf]
+  > emit: boot.reflectiveSelf
+  > log: "🚧 Emit stub for boot.reflectiveSelf"
+[/logic emit.boot.reflectiveSelf]
+
+[logic emit.self.snapshot]
+  > emit: self.snapshot
+  > log: "🚧 Emit stub for self.snapshot"
+[/logic emit.self.snapshot]
+
+[logic emit.self.mirror.sync]
+  > emit: self.mirror.sync
+  > log: "🚧 Emit stub for self.mirror.sync"
+[/logic emit.self.mirror.sync]
