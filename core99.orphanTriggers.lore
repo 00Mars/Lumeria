@@ -1,0 +1,58 @@
+[capsule runtime.orphanTriggers]
+
+[meta]
+  set: type = patch
+  set: purpose = "Stub triggers for unmatched signals detected in repo"
+[/meta]
+
+[trigger capsule.load /]
+[logic capsule.load]
+  > log: "🚧 Trigger stub for capsule.load"
+[/logic capsule.load]
+
+[trigger capsule.parse /]
+[logic capsule.parse]
+  > log: "🚧 Trigger stub for capsule.parse"
+[/logic capsule.parse]
+
+[trigger emit.signal /]
+[logic emit.signal]
+  > log: "🚧 Trigger stub for emit.signal"
+[/logic emit.signal]
+
+[trigger grammar.check.all /]
+[logic grammar.check.all]
+  > log: "🚧 Trigger stub for grammar.check.all"
+[/logic grammar.check.all]
+
+[trigger kernel.boot.checkpoint /]
+[logic kernel.boot.checkpoint]
+  > log: "🚧 Trigger stub for kernel.boot.checkpoint"
+[/logic kernel.boot.checkpoint]
+
+[trigger kernel.next /]
+[logic kernel.next]
+  > log: "🚧 Trigger stub for kernel.next"
+[/logic kernel.next]
+
+[trigger load.capsules /]
+[logic load.capsules]
+  > log: "🚧 Trigger stub for load.capsules"
+[/logic load.capsules]
+
+[trigger next.step /]
+[logic next.step]
+  > log: "🚧 Trigger stub for next.step"
+[/logic next.step]
+
+[trigger reject.signal /]
+[logic reject.signal]
+  > log: "🚧 Trigger stub for reject.signal"
+[/logic reject.signal]
+
+[trigger runtime.awaitInput /]
+[logic runtime.awaitInput]
+  > log: "🚧 Trigger stub for runtime.awaitInput"
+[/logic runtime.awaitInput]
+
+[/capsule runtime.orphanTriggers]
