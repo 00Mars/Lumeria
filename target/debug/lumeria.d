@@ -1,0 +1,1 @@
+C:\Users\Jonas\Documents\Lumeria\Orphan_Tracker\Lumeria\target\debug\lumeria.exe: C:\Users\Jonas\Documents\Lumeria\Orphan_Tracker\Lumeria\src\lumeria_loader.rs C:\Users\Jonas\Documents\Lumeria\Orphan_Tracker\Lumeria\src\lumeria_runtime.rs C:\Users\Jonas\Documents\Lumeria\Orphan_Tracker\Lumeria\src\main.rs
