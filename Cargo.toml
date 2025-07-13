@@ -7,3 +7,7 @@ edition = "2021"
 regex = "1.11.1"
 walkdir = "2.5.0"
 
+
+[[bin]]
+name = "standalone"
+path = "src/bin/standalone.rs"
