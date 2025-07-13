@@ -1,8 +1,5 @@
-mod lumeria_loader;
-mod lumeria_runtime;
-
-use lumeria_loader::CapsuleLoader;
-use lumeria_runtime::LumeriaRuntime;
+use lumeria::lumeria_loader::CapsuleLoader;
+use lumeria::lumeria_runtime::LumeriaRuntime;
 
 fn main() {
     println!("🧠 Loading Lumeria system...");
