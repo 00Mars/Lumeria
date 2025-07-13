@@ -14,5 +14,6 @@ fn main() {
     println!("✅ {} capsules loaded", capsules.len());
 
     let mut engine = MnemonicEngine::new(capsules);
+println!("🔑 {} mnemonic codes loaded", engine.mnemonic.keys().len());
     engine.emit("boot.assembly");
 }

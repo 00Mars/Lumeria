@@ -100,15 +100,23 @@ pub fn parse_capsules_from_file(data: &str) -> Vec<Capsule> {
         let grammar_blocks = extract_named_blocks(body, "[grammar ", "[/grammar");
 
         let mut mnemonic_map = HashMap::new();
-        for logic in &logic_blocks {
-            for line in logic.lines() {
+
+        fn extract_mnemonic(lines: &str, map: &mut HashMap<String, String>) {
+            for line in lines.lines() {
                 if let Some(rest) = line.trim().strip_prefix("> mnemonic.map:") {
                     let mut parts = rest.splitn(2, '=');
                     if let (Some(k), Some(v)) = (parts.next(), parts.next()) {
-                        mnemonic_map.insert(k.trim().to_string(), v.trim().to_string());
+                        map.insert(k.trim().to_string(), v.trim().to_string());
                     }
                 }
             }
+        }
+
+        for block in &logic_blocks {
+            extract_mnemonic(block, &mut mnemonic_map);
+        }
+        for block in &grammar_blocks {
+            extract_mnemonic(block, &mut mnemonic_map);
         }
 
         println!("🧠 Capsule loaded: {}", capsule_name);
