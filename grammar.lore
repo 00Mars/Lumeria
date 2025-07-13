@@ -4,6 +4,7 @@
 
 [logic grammar.engine.start]
   > emit: validate.grammar
+[/logic grammar.engine.starto]
 
 [capsule grammarSpec]
 
@@ -11,7 +12,7 @@
 
 [logic validate.grammar]
   > emit: grammar.check.all
-
+[/logic validate.grammar]
 [trigger grammar.check.all /]
 
 [logic grammar.check.all]

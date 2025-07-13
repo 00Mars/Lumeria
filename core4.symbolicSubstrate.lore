@@ -106,7 +106,6 @@
 
   [capsule symbolicSubstrate.resolve.memory]
     [trigger symbolicSubstrate.resolve.memory /]
-    [memory symbolic.env.keys /]
     [logic memory.resolve]
       > log: "🔍 Resolving memory keys from symbolic substrate..."
       - each: key in ctx.env.memory
