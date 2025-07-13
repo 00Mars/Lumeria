@@ -152,8 +152,8 @@ impl LumeriaRuntime {
         let value = self.parse_value(val_expr);
         Some((key, value))
     }
-
-    fn parse_value(&self, expr: &str) -> i64 {
+  
+fn parse_value(&self, expr: &str) -> i64 {
     let expr = expr.trim();
     if expr.starts_with("{{") && expr.ends_with("}}") {
         let inner = expr
@@ -183,9 +183,11 @@ impl LumeriaRuntime {
 }
 
 
+
     fn evaluate_condition(&self, cond: &str) -> bool {
         let mut tokens = cond.split_whitespace();
-        if let (Some(var), Some(op), Some(num_str)) = (tokens.next(), tokens.next(), tokens.next()) {
+        if let (Some(var), Some(op), Some(num_str)) = (tokens.next(), tokens.next(), tokens.next())
+        {
             let left = *self.memory.get(var).unwrap_or(&0);
             let right: i64 = num_str.parse().unwrap_or(0);
             match op {
