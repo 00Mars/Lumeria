@@ -38,43 +38,52 @@ impl LumeriaRuntime {
     }
 
     pub fn emit(&mut self, signal: &str) {
-        if self.call_stack.len() >= MAX_RECURSION_DEPTH {
-            println!("⚠️ Maximum recursion depth exceeded at: {}", signal);
-            return;
-        }
+    if self.call_stack.len() >= MAX_RECURSION_DEPTH {
+        println!("⚠️ Maximum recursion depth exceeded at: {}", signal);
+        return;
+    }
 
-        let count = self.recursion_counts.entry(signal.to_string()).or_insert(0);
-        if *count >= MAX_SIGNAL_RECURSION {
-            println!("⚠️ Recursion limit reached for: {}", signal);
-            return;
-        }
+    if self.call_stack.contains(&signal.to_string()) {
+        println!("🔁 Infinite loop detected: {}", signal);
+        return;
+    }
 
-        *count += 1;
-        self.call_stack.push(signal.to_string());
-        println!("\n🚨 Emit: {}", signal);
+    let count = self.recursion_counts.entry(signal.to_string()).or_insert(0);
+    if *count >= MAX_SIGNAL_RECURSION {
+        println!("🛑 Recursion guard blocked: {} (count = {})", signal, count);
+        return;
+    }
 
-        let Some(indices) = self.trigger_map.get(signal).cloned() else {
-            println!("⚠️ No capsule responds to: {}", signal);
-            return;
-        };
+    *count += 1;
+    self.call_stack.push(signal.to_string());
+    println!("\n🚨 Emit: {}", signal);
 
-        for i in indices {
-            let (name, logic_blocks) = {
-                let cap = &self.capsules[i];
-                (cap.name.clone(), cap.logic.clone())
-            };
-
-            println!("📦 Executing: {}", name);
-            for logic in logic_blocks {
-                self.execute_logic(&logic);
-            }
-        }
-
+    let Some(indices) = self.trigger_map.get(signal).cloned() else {
+        println!("⚠️ No capsule responds to: {}", signal);
         self.call_stack.pop();
         if let Some(c) = self.recursion_counts.get_mut(signal) {
-            *c -= 1;
+            *c = c.saturating_sub(1);
+        }
+        return;
+    };
+
+    for i in indices {
+        let (name, logic_blocks) = {
+            let cap = &self.capsules[i];
+            (cap.name.clone(), cap.logic.clone())
+        };
+
+        println!("📦 Executing: {}", name);
+        for logic in logic_blocks {
+            self.execute_logic(&logic);
         }
     }
+
+    self.call_stack.pop();
+    if let Some(c) = self.recursion_counts.get_mut(signal) {
+        *c = c.saturating_sub(1);
+    }
+}
 
     pub fn mnemonic_keys(&self) -> Vec<String> {
         self.mnemonic_map.keys().cloned().collect()
@@ -193,3 +202,4 @@ impl LumeriaRuntime {
         }
     }
 }
+

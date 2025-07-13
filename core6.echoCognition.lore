@@ -34,6 +34,7 @@
   > memory.set cognition.tick = 0
   > memory.set cognition.tick.rate = 10s
   > emit: cognition.ready
+  > guard: prevent.loop key = "echoCognition.tick" max = N
   > emit: echoCognition.tick
   > emit: echoCognition.route
 [/logic echoCognition.init]
@@ -81,6 +82,7 @@
   > wait: 300ms
   > delay: cognition.tick.rate
   > emit: cognition.loop
+  > guard: prevent.loop key = "echoCognition.tick" max = N
   > emit: echoCognition.tick
 [/logic echoCognition.tick]
 

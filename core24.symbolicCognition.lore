@@ -132,6 +132,7 @@
 [logic dream.initiate]
   > memory.set: dream.active = true
   > draw.label: "🌙 Entering symbolic dream loop..."
+  > guard: prevent.loop key = "dream.tick" max = 1
   > emit: dream.tick
 [/logic dream.initiate]
 
@@ -147,6 +148,7 @@
     do:
       > emit: dream.sequence
       > wait: 3s
+      > guard: prevent.loop key = "dream.tick" max = 1
       > emit: dream.tick
 [/logic dream.tick]
 
