@@ -318,7 +318,16 @@
 [when fs.parseRoot] > emit: fs.loadRootCapsule [/when fs.parseRoot]
 [when fs.parseCapsuleLines] > emit: fs.splitLines [/when fs.parseCapsuleLines]
 [when fs.extractCapsules] > emit: fs.extractCapsules [/when fs.extractCapsules]
-[when validate.capsules] > emit: validate.capsules [/when validate.capsules]
+[when validate.capsules]
+ > default: capsule.validation.done = 0
+
+[condition capsule.validation.done == 0]
+  check: capsule.validation.done == 0
+  then:
+    > memory.set: capsule.validation.done = 1
+    > emit: validate.capsules
+[/condition capsule.validation.done == 0] 
+[/when validate.capsules]
 [when capsule.search] > emit: capsule.search [/when capsule.search]
 [when capsule.provenance] > emit: capsule.provenance [/when capsule.provenance]
 [when capsule.fingerprint] > emit: capsule.fingerprint [/when capsule.fingerprint]

@@ -143,27 +143,37 @@ impl LumeriaRuntime {
         let value = self.parse_value(val_expr);
         Some((key, value))
     }
+  
+fn parse_value(&self, expr: &str) -> i64 {
+    let expr = expr.trim();
+    if expr.starts_with("{{") && expr.ends_with("}}") {
+        let inner = expr
+            .trim_start_matches("{{")
+            .trim_end_matches("}}")
+            .trim();
 
-    fn parse_value(&self, expr: &str) -> i64 {
-        let expr = expr.trim();
-        if expr.starts_with("{{") && expr.ends_with("}}") {
-            let inner = expr.trim_start_matches("{{").trim_end_matches("}}").trim();
-            let mut tokens = inner.split_whitespace();
-            if let (Some(var), Some(op), Some(num)) = (tokens.next(), tokens.next(), tokens.next())
-            {
-                let val: i64 = num.parse().unwrap_or(0);
-                let base = *self.memory.get(var).unwrap_or(&0);
-                return match op {
-                    "+" => base + val,
-                    "-" => base - val,
-                    _ => base,
-                };
-            }
-            0
+        let mut tokens = inner.split_whitespace();
+        if let (Some(var), Some(op), Some(num)) = (
+            tokens.next(),
+            tokens.next(),
+            tokens.next(),
+        ) {
+            let val: i64 = num.parse().unwrap_or(0);
+            let base = *self.memory.get(var).unwrap_or(&0);
+            return match op {
+                "+" => base + val,
+                "-" => base - val,
+                _ => base,
+            };
         } else {
-            expr.parse().unwrap_or(0)
+            return 0;
         }
+    } else {
+        expr.parse().unwrap_or(0)
     }
+}
+
+
 
     fn evaluate_condition(&self, cond: &str) -> bool {
         let mut tokens = cond.split_whitespace();
